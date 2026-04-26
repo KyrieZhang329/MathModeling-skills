@@ -163,6 +163,7 @@ workspace/
 - 写入常见模型族方法卡片（AHP/TOPSIS、回归族、时间序列、MIP/启发式、图模型、仿真等）
 - 改进 `code-reviewer` 和 `robustness-checker` 之间的衔接，避免重复检查
 - 欢迎大家在 `docs/` 里写一些常见踩坑笔记（数据泄漏、baseline 偏移、图和结果对不上之类）
+- 兼容其他AI工具的使用
 
 ## License
 

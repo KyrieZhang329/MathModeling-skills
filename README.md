@@ -1,55 +1,53 @@
 # MathModeling-skills
 
-A set of Claude Code / Codex skills for working through mathematical modeling contests step by step.
+A set of Claude Code / Codex Skills for mathematical modeling contests, breaking the contest workflow into small stages that can be completed step by step.
 
-## Why this exists
+## Project Motivation
 
-Most problems in a modeling contest don't come from not knowing models. They come from:
+The real problems in mathematical modeling contests often do not come from “not knowing enough models.” They usually come from:
 
-- misreading the problem and solving the wrong thing
-- jumping to a fancy model before checking if a baseline works
-- code that runs but doesn't actually match the method described in the paper
-- numbers in the paper that don't match any script output
-- claims like "our model is better" without a baseline or sensitivity check
-- figures that look nice but don't support any specific conclusion
+- misreading the problem and solving something the problem never asked for
+- jumping to a complex model before testing a baseline
+- writing code that runs but does not match the method described in the paper
+- putting numbers in the paper that cannot be found in any script output
+- claiming “our model is better” without a baseline or sensitivity analysis
+- making good-looking figures that do not clearly support any conclusion
 
-This repo is an attempt to make those mistakes harder to make. It splits the contest workflow into small skills, each with a narrow job, and asks the agent to finish one stage before starting the next.
+`MathModeling-skills` is designed around these issues. It splits the contest process into a group of small skills. Each skill has one narrow job, and the agent is expected to finish the current stage before moving to the next one.
 
-It is not a paper generator. It is closer to a checklist that an agent (and you) follow together.
+## What It Does
 
-## What it does
+- Splits the modeling contest workflow into 11 skills, each corresponding to one stage.
+- Encourages a fixed process: read the problem, classify the subquestions, select methods, write code, check results, then draft the paper.
+- Keeps intermediate outputs such as parsed problems, method plans, data reports, results, figures, and paper drafts, so that every important number can be traced back to its source.
+- Uses the same skill set for Claude Code (`.claude/skills/`) and Codex (`.codex/skills/`).
 
-- Breaks the contest workflow into 11 skills, each focused on one stage.
-- Forces a fixed order: read the problem first, then classify, then pick methods, then code, then check, then write.
-- Keeps intermediate outputs (parsed problem, method plan, data report, results, figures, draft sections) so you can go back and check where any number came from.
-- Works in both Claude Code (`.claude/skills/`) and Codex (`.codex/skills/`) with the same skill set.
+## Project Boundaries
 
-## What it does not do
-
-- It will not write a full paper for you in one shot.
-- It will not invent data, results, citations, or figures when evidence is missing. Missing evidence is reported as a blocker.
-- It will not write numerical conclusions before there are actual results to back them up.
-- It will not claim a model is better without a baseline and a robustness check.
-- It will not modify your raw data. Cleaning happens on copies.
-- It does not replace your modeling judgment. You still decide which method makes sense for the problem.
+- It does not write a complete contest paper in one click.
+- It does not invent data, results, references, or figures when evidence is missing. Missing evidence is reported as a blocker.
+- It does not write numerical conclusions before results exist.
+- It does not claim a model is better without a baseline and robustness or sensitivity checks.
+- It does not modify your raw data. Cleaning should happen on copied data.
+- It does not replace modeling judgment. The final choice of method still belongs to the user.
 
 ## Skills
 
-| Skill | Purpose |
-| --- | --- |
-| `workflow-orchestrator` | Tracks where you are in the workflow and decides which skill to run next. |
-| `problem-parser` | Reads the problem statement and pulls out goals, objects, constraints, data, outputs, and subquestions. |
-| `problem-classifier` | Labels each subquestion with a problem type (evaluation, prediction, optimization, etc.). |
-| `method-selector` | For each subquestion, picks a baseline, a main model, and optional improved variants. |
-| `data-auditor-cleaner` | Audits the dataset, flags issues, and produces a cleaned copy with a short data report. |
-| `model-code-generator` | Generates Python or MATLAB code from the agreed method plan. |
-| `code-reviewer` | Reviews and fixes the generated code: bugs, mismatches with the plan, unnecessary complexity. |
-| `robustness-checker` | Runs sensitivity, error, and baseline comparison checks on the results. |
-| `figure-table-planner` | Plans which figures and tables are actually needed and what each one is supposed to show. |
-| `paper-section-writer` | Drafts paper sections using only results that already exist. |
-| `quality-assurance-auditor` | Final pass before submission: looks for inconsistencies, missing evidence, broken references. |
+| Skill                       | Purpose                                                      |
+| --------------------------- | ------------------------------------------------------------ |
+| `workflow-orchestrator`     | Tracks the current stage and decides which skill should be used next. |
+| `problem-parser`            | Reads the problem and extracts goals, objects, constraints, data, outputs, and subquestions. |
+| `problem-classifier`        | Classifies each subquestion into a task type, such as evaluation, prediction, or optimization. |
+| `method-selector`           | Selects a baseline, a main model, and optional improved models for each subquestion. |
+| `data-auditor-cleaner`      | Audits the data, reports issues, and produces cleaned data with a data report. |
+| `model-code-generator`      | Generates Python / MATLAB code according to the validated method plan. |
+| `code-reviewer`             | Reviews and fixes code issues, including bugs, method mismatches, and unnecessary complexity. |
+| `robustness-checker`        | Runs sensitivity analysis, error checks, and baseline comparisons. |
+| `figure-table-planner`      | Plans the figures and tables that are actually needed, and clarifies what each one should show. |
+| `paper-section-writer`      | Drafts paper sections using only existing results and validated artifacts. |
+| `quality-assurance-auditor` | Performs the final check before submission, looking for inconsistencies, missing evidence, and unsupported claims. |
 
-## Workflow
+## Standard Workflow
 
 ```text
 workflow-orchestrator
@@ -66,110 +64,109 @@ workflow-orchestrator
 → workflow-orchestrator
 ```
 
-The order matters. A few rules the orchestrator tries to enforce:
+The order matters. The orchestrator is expected to keep several basic gates:
 
-- No method selection until the problem has been parsed.
-- No code generation until the method plan is reviewed.
-- No numerical claims in the paper until results exist on disk.
-- No "our model is better" without a baseline result and a sensitivity check.
-- No final assembly until QA has passed.
+- Do not select methods before the problem is parsed.
+- Do not generate code before the method plan is reviewed.
+- Do not write numerical claims in the paper before result files exist.
+- Do not claim “our model is better” without a baseline and sensitivity analysis.
+- Do not assemble the final paper before QA passes.
 
-If you want to skip a step on purpose, that's fine, but it should be a deliberate choice rather than an accident.
+## **Usage**
 
-## Usage
+Before starting the first conversation, it is recommended to send the corresponding initial prompt:
 
-Before starting your first conversation, it is recommended to send the corresponding initial prompt:
+- English conversation: [Initial Prompt.md](Initial Prompt.md)![Attachment.tiff](../../../../Attachment.tiff)
+- Chinese conversation: [Initial Prompt-zh.md](Initial Prompt-zh.md)![Attachment.tiff](../../../../Attachment.tiff)
 
-- English conversation: [Initial Prompt.md](Initial%20Prompt.md)
-- Chinese conversation: [Initial Prompt-zh.md](Initial%20Prompt-zh.md)
+### **Claude Code**
 
-### Claude Code
+Clone this repository and open it in Claude Code. The main files are:
 
-Clone the repo and open it in Claude Code. The relevant files:
-
-- `CLAUDE.md` — project-level rules.
-- `.claude/skills/<skill-name>/SKILL.md` — the skill definitions.
-- `templates/` — output shapes for parsed problems, method plans, etc.
-- `examples/` — example runs (work in progress).
+- `CLAUDE.md`: project-level rules
+- `.claude/skills/<skill-name>/SKILL.md`: stage-specific skill definitions
+- `templates/`: output format references for parsed problems, method plans, and other artifacts
+- `examples/`: example workflows, still being updated
 
 A reasonable first message:
 
 ```text
-Read CLAUDE.md, then run workflow-orchestrator. The contest problem is in workspace/problem/. Don't skip stages.
+Read CLAUDE.md, then run workflow-orchestrator. Our contest problem is in workspace/problem/. Follow the stage order and do not skip steps.
 ```
 
-### Codex
+### **Codex**
 
-Same idea, just different entry points:
+The idea is the same, but the entry files are different:
 
-- `AGENTS.md` for project-level rules.
-- `.codex/skills/<skill-name>/SKILL.md` for the skill set.
+- `AGENTS.md`: project-level rules
+- `.codex/skills/<skill-name>/SKILL.md`: Codex skill definitions
 
-First message:
+A reasonable first message:
 
 ```text
-Read AGENTS.md, then start with workflow-orchestrator. The contest problem is in workspace/problem/. Follow the stage order and do not skip stages.
+Read AGENTS.md, then start with workflow-orchestrator. Our contest problem is in workspace/problem/. Follow the stage order and do not skip steps.
 ```
 
-### Suggested workspace
+### **Suggested Workspace Structure**
 
-When you actually use this on a contest, keep generated files in a workspace separate from the skills repo:
+When using this repository for a real contest, keep all generated artifacts in a workspace separate from the skills repository:
 
 ```text
 workspace/
-├── problem/          # original problem statement, parsed problem JSON
-├── data_raw/         # original data, never modified
-├── data_clean/       # cleaned data + data audit report
+├── problem/          # original problem statement and parsed problem JSON
+├── data_raw/         # original data, unchanged
+├── data_clean/       # cleaned data and data audit report
 ├── scripts/          # generated Python / MATLAB code
 ├── results/          # tables, metrics, model outputs
 ├── figures/          # final figures
-├── paper_sections/   # drafted sections
+├── paper_sections/   # drafted paper sections
 └── final_paper/      # assembled paper
 ```
 
-Two things worth taking seriously:
+Two rules are worth keeping:
 
-1. `data_raw/` is read-only. If you need to modify data, copy it to `data_clean/` first.
-2. Anything in `paper_sections/` should be traceable back to a file under `results/`, `figures/`, or `data_clean/`. If it isn't, something is wrong.
+1. Treat `data_raw/` as read-only. If data needs to be modified, copy it to `data_clean/` first.
+2. Every section under `paper_sections/` should be traceable to files under `results/`, `figures/`, or `data_clean/`.
 
-### Example prompts
+### **Example Prompts**
 
-Starting a new contest:
-
-```text
-Use workflow-orchestrator. Problem is in workspace/problem/problem.pdf, data is in workspace/data_raw/. Begin with problem-parser.
-```
-
-Resuming partway through:
+Starting a new contest task:
 
 ```text
-The method plan is in workspace/problem/method_plan.json and cleaned data is in workspace/data_clean/. Continue from model-code-generator.
+Use workflow-orchestrator. Our problem is in workspace/problem/problem.pdf, and the data is in workspace/data_raw/. Start from problem-parser.
 ```
 
-Asking for a robustness pass on existing results:
+Resuming from an existing method plan:
 
 ```text
-Results are in workspace/results/. Run robustness-checker against the baseline in baseline_results.csv. Don't rerun the main model.
+The method plan is in workspace/problem/method_plan.json, and the cleaned data is in workspace/data_clean/. Continue from model-code-generator.
 ```
 
-## Current status
+Running a robustness check on existing results:
 
-Still in an early first version, so some parts are intentionally rough:
+```text
+Results are in workspace/results/. Use robustness-checker to compare them with baseline_results.csv. Do not rerun the main model.
+```
 
-- The skill prompts will keep evolving as more contest problems are run through them.
-- Templates and JSON schemas are deliberately minimal right now.
-- The `examples/` directory is mostly a placeholder. Real worked examples are next.
+## **Current Status**
 
-If you run a full workflow and spot problems, feel free to open an issue, or send details directly to [zjzhang0424@gmail.com](mailto:zjzhang0424@gmail.com). Thank you.
+This project is still in an early first version.
 
-## Roadmap
+- The skill prompts will keep being adjusted as more contest problems are tested.
+- The templates and JSON schemas are intentionally simple for now.
+- The `examples/` directory is still mostly a placeholder. Complete end-to-end examples are planned next.
 
-- Add complete worked examples for evaluation, prediction, optimization, and hybrid problem types.
-- Tighten JSON schemas for problem parsing, method planning, figure planning, and QA reports.
-- Add method cards for common model families (AHP/TOPSIS, regression families, time series, MIP/heuristics, graph models, simulation).
-- Improve the handoff between `code-reviewer` and `robustness-checker` to avoid duplicate checks.
-- Contributions to `docs/` are welcome for common failure notes (data leakage, baseline drift, figure-result mismatch, and similar cases).
+If you run a full workflow and find something broken or awkward, feel free to open an issue or contact me at [zjzhang0424@gmail.com](mailto:zjzhang0424@gmail.com)![Attachment.tiff](../../../../Attachment.tiff). Thank you.
 
-## License
+## **Roadmap**
+
+- Add complete examples for evaluation, prediction, optimization, and hybrid problems.
+- Tighten the JSON schemas for problem parsing, method planning, figure planning, and QA reports.
+- Add method cards for common model families, including AHP/TOPSIS, regression, time series, MIP/heuristics, graph models, and simulation.
+- Improve the handoff between `code-reviewer` and `robustness-checker` to reduce duplicated checks.
+- Welcome notes in `docs/` about common failure cases, such as data leakage, baseline drift, and figure-result mismatch.
+- Improve compatibility with other AI coding and writing tools.
+
+## **License**
 
 MIT.
