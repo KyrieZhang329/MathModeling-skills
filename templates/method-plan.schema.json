@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Method Plan",
+  "type": "object",
+  "properties": {
+    "subproblem_id": {
+      "type": "string"
+    },
+    "baseline_method": {
+      "type": "string"
+    },
+    "main_method": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "subproblem_id",
+    "main_method"
+  ],
+  "additionalProperties": false
+}
