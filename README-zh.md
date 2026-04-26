@@ -72,6 +72,16 @@ workflow-orchestrator
 - 没有 baseline 和敏感性分析，就不写"我们的模型更好"
 - QA 没过不组装最终论文
 
+## 文档索引
+
+- [Modeling Workflow](docs/modeling-workflow.md): how the 11 skills are connected.
+- [Problem Taxonomy](docs/problem-taxonomy.md): task types used by `problem-classifier`.
+- [Method Selection Tree](docs/method-selection-tree.md): baseline, main model, and improvement choices.
+- [Design Principles](docs/design-principles.md): project-level modeling and workflow principles.
+- [Figure and Table Guidelines](docs/figure-table-guidelines.md): how to plan visual evidence.
+- [Paper Writing Rules](docs/paper-writing-rules.md): rules for drafting paper sections from artifacts.
+- [QA Checklist](docs/qa-checklist.md): final audit checklist before submission.
+
 ## 使用方式
 
 开始第一轮对话前，推荐先发送对应的 Initial Prompt：

@@ -72,14 +72,24 @@ The order matters. The orchestrator is expected to keep several basic gates:
 - Do not claim “our model is better” without a baseline and sensitivity analysis.
 - Do not assemble the final paper before QA passes.
 
-## **Usage**
+## Documents
+
+- [Modeling Workflow](docs/modeling-workflow.md): how the 11 skills are connected.
+- [Problem Taxonomy](docs/problem-taxonomy.md): task types used by `problem-classifier`.
+- [Method Selection Tree](docs/method-selection-tree.md): baseline, main model, and improvement choices.
+- [Design Principles](docs/design-principles.md): project-level modeling and workflow principles.
+- [Figure and Table Guidelines](docs/figure-table-guidelines.md): how to plan visual evidence.
+- [Paper Writing Rules](docs/paper-writing-rules.md): rules for drafting paper sections from artifacts.
+- [QA Checklist](docs/qa-checklist.md): final audit checklist before submission.
+
+## Usage
 
 Before starting the first conversation, it is recommended to send the corresponding initial prompt:
 
 - English conversation: [Initial Prompt.md](Initial Prompt.md)![Attachment.tiff](../../../../Attachment.tiff)
 - Chinese conversation: [Initial Prompt-zh.md](Initial Prompt-zh.md)![Attachment.tiff](../../../../Attachment.tiff)
 
-### **Claude Code**
+### Claude Code
 
 Clone this repository and open it in Claude Code. The main files are:
 
@@ -94,7 +104,7 @@ A reasonable first message:
 Read CLAUDE.md, then run workflow-orchestrator. Our contest problem is in workspace/problem/. Follow the stage order and do not skip steps.
 ```
 
-### **Codex**
+### Codex
 
 The idea is the same, but the entry files are different:
 
@@ -107,7 +117,7 @@ A reasonable first message:
 Read AGENTS.md, then start with workflow-orchestrator. Our contest problem is in workspace/problem/. Follow the stage order and do not skip steps.
 ```
 
-### **Suggested Workspace Structure**
+### Suggested Workspace Structure
 
 When using this repository for a real contest, keep all generated artifacts in a workspace separate from the skills repository:
 
@@ -148,7 +158,7 @@ Running a robustness check on existing results:
 Results are in workspace/results/. Use robustness-checker to compare them with baseline_results.csv. Do not rerun the main model.
 ```
 
-## **Current Status**
+## Current Status
 
 This project is still in an early first version.
 
@@ -158,7 +168,7 @@ This project is still in an early first version.
 
 If you run a full workflow and find something broken or awkward, feel free to open an issue or contact me at [zjzhang0424@gmail.com](mailto:zjzhang0424@gmail.com)![Attachment.tiff](../../../../Attachment.tiff). Thank you.
 
-## **Roadmap**
+## Roadmap
 
 - Add complete examples for evaluation, prediction, optimization, and hybrid problems.
 - Tighten the JSON schemas for problem parsing, method planning, figure planning, and QA reports.
@@ -167,6 +177,6 @@ If you run a full workflow and find something broken or awkward, feel free to op
 - Welcome notes in `docs/` about common failure cases, such as data leakage, baseline drift, and figure-result mismatch.
 - Improve compatibility with other AI coding and writing tools.
 
-## **License**
+## License
 
 MIT.
