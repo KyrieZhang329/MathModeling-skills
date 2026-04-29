@@ -2,20 +2,235 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Method Plan",
   "type": "object",
+  "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "model_spec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/string_array"
+        },
+        "required_data": {
+          "$ref": "#/$defs/string_array"
+        },
+        "expected_output": {
+          "$ref": "#/$defs/string_array"
+        },
+        "limitations": {
+          "$ref": "#/$defs/string_array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rejected_method": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
   "properties": {
-    "subproblem_id": {
-      "type": "string"
+    "method_plan_summary": {
+      "type": "object",
+      "properties": {
+        "overall_strategy": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "implementation_priority": {
+          "$ref": "#/$defs/string_array"
+        }
+      },
+      "additionalProperties": false
     },
-    "baseline_method": {
-      "type": "string"
+    "implementation": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "enum": [
+            "python",
+            "matlab"
+          ]
+        },
+        "runtime_notes": {
+          "$ref": "#/$defs/string_array"
+        },
+        "script_style": {
+          "type": "string"
+        },
+        "result_format": {
+          "$ref": "#/$defs/string_array"
+        },
+        "figure_format": {
+          "$ref": "#/$defs/string_array"
+        },
+        "random_seed_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "additionalProperties": false
     },
-    "main_method": {
+    "subproblem_methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "problem_type": {
+            "type": "string"
+          },
+          "required_output": {
+            "$ref": "#/$defs/string_array"
+          },
+          "baseline_model": {
+            "$ref": "#/$defs/model_spec"
+          },
+          "main_model": {
+            "$ref": "#/$defs/model_spec"
+          },
+          "improved_model": {
+            "$ref": "#/$defs/model_spec"
+          },
+          "rejected_methods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/rejected_method"
+            }
+          },
+          "expected_artifacts": {
+            "$ref": "#/$defs/string_array"
+          },
+          "validation_plan": {
+            "$ref": "#/$defs/string_array"
+          },
+          "robustness_plan": {
+            "$ref": "#/$defs/string_array"
+          }
+        },
+        "required": [
+          "id",
+          "problem_type",
+          "required_output",
+          "baseline_model",
+          "main_model",
+          "improved_model",
+          "rejected_methods",
+          "expected_artifacts",
+          "validation_plan",
+          "robustness_plan"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "dependency_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "artifact_needed": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "artifact_needed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "data_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "subquestion": {
+            "type": "string"
+          },
+          "required_data": {
+            "$ref": "#/$defs/string_array"
+          },
+          "missing_data": {
+            "$ref": "#/$defs/string_array"
+          },
+          "data_risks": {
+            "$ref": "#/$defs/string_array"
+          }
+        },
+        "required": [
+          "subquestion",
+          "required_data",
+          "missing_data",
+          "data_risks"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "validation_plan": {
+      "$ref": "#/$defs/string_array"
+    },
+    "robustness_plan": {
+      "$ref": "#/$defs/string_array"
+    },
+    "rejected_methods": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rejected_method"
+      }
+    },
+    "implementation_notes": {
+      "$ref": "#/$defs/string_array"
+    },
+    "recommended_next_skill": {
       "type": "string"
     }
   },
   "required": [
-    "subproblem_id",
-    "main_method"
+    "method_plan_summary",
+    "implementation",
+    "subproblem_methods",
+    "dependency_plan",
+    "data_requirements",
+    "validation_plan",
+    "robustness_plan",
+    "rejected_methods",
+    "implementation_notes",
+    "recommended_next_skill"
   ],
   "additionalProperties": false
 }

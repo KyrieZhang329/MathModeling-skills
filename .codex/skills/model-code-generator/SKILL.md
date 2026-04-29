@@ -1,26 +1,26 @@
 ---
 name: model-code-generator
-description: Generate executable Python or MATLAB modeling code from a validated method plan.
+description: Route validated method plans to Python or MATLAB code generation skills based on implementation target.
 license: MIT
 ---
 
 # Purpose
 
-Generate clear, executable, and reproducible modeling code from a validated method plan and cleaned data.
+Route code generation to the correct language-specific implementation skill.
 
-This skill converts the selected baseline, main, and improved models into runnable Python or MATLAB scripts. It should produce code that reads cleaned data, implements the planned methods, saves intermediate and final outputs, and creates model-related figures when required by the method plan.
+This skill reads a validated method plan, checks the `implementation.target` field, and hands off the task to either `python-model-code-generator` or `matlab-model-code-generator`.
 
-This skill does not choose the modeling route, clean raw data, perform final code review, run final QA, or write paper sections.
+This skill does not generate language-specific code itself. It only decides where code generation should happen.
 
 # When to use
 
 Use this skill:
 
 - After `method-selector` has produced a validated method plan.
-- After `data-auditor-cleaner` has confirmed that the required data is ready or ready with documented warnings.
-- When executable scripts are needed for baseline, main, or improved models.
-- When result tables, intermediate outputs, and model figures must be generated reproducibly.
-- Before `code-reviewer`.
+- After `data-auditor-cleaner` has confirmed that required data is ready or ready with documented warnings.
+- When the workflow reaches the code generation stage.
+- When the implementation target may be `python` or `matlab`.
+- When a contest requires MATLAB / 北太天元 and the method plan should route to MATLAB-compatible code generation.
 
 # Preconditions
 
@@ -29,329 +29,402 @@ The following should already exist or be provided:
 - A validated problem parse.
 - A validated problem classification artifact.
 - A validated method plan.
-- Cleaned data or a clear statement that the model does not require tabular data.
-- Data audit report and field mapping, if data is used.
-- Required inputs, expected outputs, validation needs, and robustness needs from the method plan.
-- Preferred implementation language, if specified.
+- An `implementation` object in the method plan.
+- Cleaned data or a clear statement that no tabular data is required.
+- Data audit report and field mapping if data is used.
 
-If the method plan is missing, hand back to `method-selector`.
+The method plan should contain:
 
-If cleaned data is required but missing, hand back to `data-auditor-cleaner`.
+```json
+{
+  "implementation": {
+    "target": "matlab",
+    "runtime_notes": [
+      "beita-tianyuan-compatible",
+      "avoid-heavy-toolboxes"
+    ]
+  }
+}
+```
+
+Supported targets:
+
+- `python`
+- `matlab`
+
+Treat MATLAB / 北太天元 as the `matlab` target with compatibility notes.
 
 # Inputs
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
-- `workspace/problem/problem_classification.json`, if available.
 - `workspace/problem/method_plan.json`, if available.
 - `workspace/results/data_report.md`, if available.
-- Cleaned data under `workspace/data_clean/`.
-- Data field mapping from `data-auditor-cleaner`.
-- Method plan sections for baseline, main model, improved model, validation, expected results, and expected figures.
-- Preferred language: Python by default unless MATLAB is requested.
-- Contest constraints, such as reproducibility, runtime limits, or allowed dependencies.
+- cleaned data paths under `workspace/data_clean/`
+- expected result paths under `workspace/results/`
+- expected figure paths under `workspace/figures/`
+- implementation target and runtime notes
+- user-provided contest requirements if they affect language choice
 
 # Workflow
 
-1. Read the validated method plan.
-   - Identify each subquestion.
-   - Identify baseline, main model, and improved model requirements.
-   - Identify expected output tables and figures.
-   - Do not change the selected modeling route unless it is impossible to implement.
-
+1. Read the method plan.
+   - Confirm that it is validated.
+   - Confirm that it includes `implementation.target`.
+   - Confirm that the target is either `python` or `matlab`.
 2. Check data readiness.
-   - Confirm cleaned data paths exist or are specified.
-   - Confirm required fields are available.
-   - Confirm field names used in code match the field mapping.
-   - Do not read from or modify `workspace/data_raw/` unless only inspecting metadata is explicitly required.
-
-3. Plan code structure.
-   - Prefer one script per subquestion when tasks are separable.
-   - Use clear function boundaries only when they reduce repetition or improve auditability.
-   - Avoid unnecessary abstractions.
-   - Keep the code easy for `code-reviewer` and teammates to inspect.
-
-4. Generate baseline code first.
-   - Implement the simplest valid baseline.
-   - Save baseline outputs.
-   - Make baseline outputs comparable with the main model.
-
-5. Generate main model code.
-   - Implement the selected method from the method plan.
-   - Use variable names aligned with the method plan and expected paper notation where practical.
-   - Save intermediate outputs needed for explanation.
-
-6. Generate improved model code only if justified.
-   - Implement optional improvements only if the method plan marks them as feasible.
-   - Clearly separate optional improvement code from required baseline and main model code.
-   - Do not add advanced methods only for appearance.
-
-7. Add reproducibility and artifact saving.
-   - Fix random seeds when randomness is used.
-   - Save result tables under `workspace/results/`.
-   - Save figures under `workspace/figures/`.
-   - Save scripts under `workspace/scripts/`.
-   - Use relative paths where possible.
-
-8. Add minimal comments.
-   - Explain key modeling steps.
-   - Explain non-obvious formulas.
-   - Explain important assumptions.
-   - Do not over-comment trivial syntax.
-
-9. Produce a code generation summary.
-   - List generated scripts.
-   - List expected outputs.
-   - List how to run the scripts.
-   - List known implementation risks.
-   - Recommend `code-reviewer` as the next skill.
+   - Confirm that the required cleaned data paths exist or are specified.
+   - If cleaned data is required but missing, hand back to `data-auditor-cleaner`.
+3. Resolve the implementation target.
+   - If `implementation.target = python`, route to `python-model-code-generator`.
+   - If `implementation.target = matlab`, route to `matlab-model-code-generator`.
+   - If the contest requires MATLAB / 北太天元, prefer `matlab`.
+   - If the target is missing or ambiguous, stop and report a blocker.
+4. Prepare handoff context.
+   - Include method plan path.
+   - Include cleaned data paths.
+   - Include expected outputs.
+   - Include expected figures.
+   - Include runtime notes.
+   - Include any contest language constraints.
+5. Hand off to the language-specific generator.
+   - Do not generate code inside this router.
+   - Do not change the method plan.
+   - Do not invent data fields, labels, metrics, parameters, or outputs.
 
 # Outputs
 
-Produce code and supporting artifacts such as:
+Produce a routing decision containing:
 
-- `workspace/scripts/model_q1.py` or `workspace/scripts/model_q1.m`
-- `workspace/scripts/model_q2.py` or equivalent
-- `workspace/results/q1_baseline_results.csv`
-- `workspace/results/q1_main_results.csv`
-- `workspace/results/q1_intermediate_outputs.csv`
-- `workspace/figures/q1_*.png`
-- run instructions
-- implementation summary
-- known risks
-- recommended next skill
+- `implementation_target`
+- `runtime_notes`
+- `next_skill`
+- `handoff_context`
+- `blocked_items`, if routing cannot proceed
+- `recommended_next_action`, if blocked
 
 # Output format
 
-Prefer this JSON-compatible summary:
+Prefer this JSON-compatible structure:
 
 ```json
 {
-  "code_generation_summary": {
-    "language": "python",
-    "generated_scripts": [
-      "workspace/scripts/model_q1.py"
+  "code_generation_route": {
+    "implementation_target": "matlab",
+    "runtime_notes": [
+      "beita-tianyuan-compatible",
+      "avoid-heavy-toolboxes",
+      "prefer-basic-matrix-and-table-operations"
     ],
-    "data_inputs": [
-      "workspace/data_clean/clean_data.csv"
-    ],
-    "result_outputs": [
-      "workspace/results/q1_baseline_results.csv",
-      "workspace/results/q1_main_results.csv"
-    ],
-    "figure_outputs": [
-      "workspace/figures/q1_ranking_plot.png"
-    ],
-    "run_instructions": [
-      "python workspace/scripts/model_q1.py"
-    ],
-    "known_risks": [
-      "Column units must be confirmed before final interpretation."
-    ],
-    "recommended_next_skill": "code-reviewer"
+    "next_skill": "matlab-model-code-generator",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "cleaned_data": [
+        "workspace/data_clean/clean_data.csv"
+      ],
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/",
+      "expected_scripts_dir": "workspace/scripts/matlab/"
+    }
   }
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+If blocked, use:
 
-# Code generation rules
+```json
+{
+  "code_generation_route": {
+    "status": "blocked",
+    "blocked_items": [
+      "implementation.target is missing from the method plan."
+    ],
+    "recommended_next_skill": "method-selector",
+    "recommended_next_action": "Add implementation.target with value python or matlab."
+  }
+}
+```
 
-- Generate code only from a validated method plan.
-- Prefer Python unless the user explicitly requests MATLAB.
-- Use minimal standard dependencies.
-- For Python, prefer common scientific libraries such as `pandas`, `numpy`, `scipy`, `scikit-learn`, and `matplotlib` when appropriate.
-- Do not introduce heavy or obscure dependencies unless the method plan requires them.
-- Keep imports minimal.
-- Use relative paths when practical.
-- Fix random seeds when using randomness.
-- Separate baseline outputs from main model outputs.
-- Save all important numeric results to files.
-- Save figures to files rather than relying only on interactive display.
-- Include enough comments to connect code to the method plan.
-- Avoid single-use over-abstractions.
-- Avoid hidden global state.
-- Avoid hard-coded absolute local paths.
-- Avoid changing the modeling route inside the code.
-- Avoid silently dropping rows or columns.
-- Avoid leaking future information into prediction features.
-- Avoid using raw data files as write targets.
+# Routing rules
 
-# Artifact rules
+- `implementation.target = python` routes to `python-model-code-generator`.
+- `implementation.target = matlab` routes to `matlab-model-code-generator`.
+- MATLAB / 北太天元 compatibility should be expressed through `runtime_notes`, not a separate target.
+- Do not route to both language generators unless the method plan explicitly requests a mixed-language workflow.
+- Do not infer Python only because the agent can write Python easily.
+- Do not infer MATLAB only because the problem is mathematical.
+- If contest rules specify MATLAB / 北太天元, route to `matlab`.
+- If the method plan and user request conflict, stop and ask for correction through `method-selector` or `workflow-orchestrator`.
 
-- Read cleaned data from `workspace/data_clean/`.
-- Do not modify files under `workspace/data_raw/`.
-- Save generated scripts under `workspace/scripts/`.
-- Save numeric outputs under `workspace/results/`.
-- Save generated figures under `workspace/figures/`.
-- Preserve file names that make subquestion and model role clear.
-- Use names such as:
-  - `model_q1.py`
-  - `model_q1_baseline.py`
-  - `model_q1_main.py`
-  - `q1_baseline_results.csv`
-  - `q1_main_results.csv`
-  - `q1_model_summary.json`
-- If a file may overwrite an existing artifact, mention it before doing so or choose a clearly versioned name.
+# Target conventions
+
+## Python
+
+Use the Python branch when:
+
+- the method plan says `implementation.target = python`
+- the user explicitly requests Python
+- the contest allows Python
+- Python is used for data preprocessing, prototyping, or modeling
+
+Expected script location:
+
+```text
+workspace/scripts/python/
+```
+
+Expected portable outputs:
+
+```text
+workspace/results/
+workspace/figures/
+```
+
+## MATLAB / 北太天元
+
+Use the MATLAB branch when:
+
+- the method plan says `implementation.target = matlab`
+- the contest requires MATLAB / 北太天元
+- the user requests MATLAB-compatible code
+- the team needs `.m` scripts for official computation
+
+Expected script location:
+
+```text
+workspace/scripts/matlab/
+```
+
+Recommended runtime notes:
+
+```text
+beita-tianyuan-compatible
+avoid-heavy-toolboxes
+prefer-basic-matrix-and-table-operations
+avoid-live-scripts
+avoid-app-designer
+save-portable-artifacts
+```
+
+Expected portable outputs:
+
+```text
+workspace/results/
+workspace/figures/
+```
 
 # Rules
 
-- Do not select or change the model plan except to report infeasibility.
-- Do not clean raw data.
-- Do not fabricate data, labels, metrics, or results.
-- Do not write final paper text.
-- Do not perform final QA.
-- Do not claim that code is correct before review.
-- Do not hide implementation assumptions.
-- Do not use advanced models without explicit method-plan support.
-- Do not create decorative figures unrelated to expected artifacts.
-- Do not ignore validation needs listed in the method plan.
-- Mark incomplete or risky implementation parts explicitly.
-- If code cannot be generated safely, stop and report blockers.
+- Do not generate language-specific code.
+- Do not review code.
+- Do not modify the method plan.
+- Do not select or change the modeling method.
+- Do not fabricate data, fields, labels, parameters, metrics, outputs, or results.
+- Do not write paper text.
+- Do not bypass `data-auditor-cleaner` when cleaned data is required.
+- Do not send code generation directly to `code-reviewer`.
+- Do not route to a language-specific generator unless the implementation target is clear.
+- Preserve all workflow gates.
 
 # Verification
 
-Before handing off, verify:
+Before handoff, verify:
 
-- Every generated script maps to a specific subquestion and method-plan item.
-- Baseline code exists for every main model unless explicitly impossible.
-- Required cleaned data paths are used.
-- No raw data file is overwritten.
-- Random seeds are fixed where needed.
-- Outputs are saved under the correct workspace directories.
-- Result tables have clear file names.
-- Figures, if generated, support expected model outputs.
-- Run instructions are provided.
-- Known risks and assumptions are listed.
-- The next skill is `code-reviewer`.
+- The method plan exists or is provided.
+- `implementation.target` is present.
+- The target is either `python` or `matlab`.
+- Runtime notes are preserved.
+- Cleaned data requirements are satisfied or explicitly not needed.
+- Expected script directory is language-specific:
+  - `workspace/scripts/python/`
+  - `workspace/scripts/matlab/`
+- Expected result and figure directories remain language-neutral:
+  - `workspace/results/`
+  - `workspace/figures/`
+- The next skill is correct.
 
 # Failure modes
 
 Stop and report a blocker if:
 
-- No validated method plan exists.
+- The method plan is missing.
+- The method plan is not validated.
+- `implementation.target` is missing.
+- `implementation.target` is not `python` or `matlab`.
+- The user request conflicts with the method plan target.
 - Cleaned data is required but unavailable.
-- Required fields are missing from cleaned data.
-- The selected method cannot be implemented with available data.
-- The required model needs dependencies that are unavailable or inappropriate for contest use.
-- The expected output is not defined.
-- Generating code would require inventing data, labels, parameters, or metrics.
-- The user asks for final paper claims or final submission before code review and results exist.
+- Required data fields are missing.
+- Routing would require changing the modeling method.
+- Routing would require inventing data or outputs.
 
 # Stop conditions
 
 This skill must stop instead of guessing when:
 
-- The method plan is ambiguous enough that different implementations would produce different meanings.
-- Required model variables cannot be mapped to cleaned data fields.
-- The model depends on unavailable attachments or forbidden external data.
-- The code would need to silently choose important parameters not specified by the method plan.
-- Continuing would overwrite validated artifacts without permission.
+- The implementation target is ambiguous.
+- Contest rules require a specific language but the method plan specifies another.
+- The selected target cannot support the method with available artifacts.
+- A mixed-language workflow is requested but not specified clearly.
+- Proceeding would skip data readiness checks.
 
 When stopping, output:
 
-- the blocker
+- blocker
 - why it matters
-- affected subquestion or model
-- safe partial implementation if any
-- missing information needed
-- recommended next action
+- affected method plan item
+- missing or conflicting information
+- recommended repair skill
+- next action
 
 # Handoff
 
-After generating code and implementation summary, hand off to:
+If `implementation.target = python`, hand off to:
 
-`code-reviewer`
+```
+python-model-code-generator
+```
 
-The handoff should include:
+Include:
 
-- generated script paths
-- data input paths
-- expected result output paths
-- expected figure output paths
-- run instructions
-- method-plan references
-- known risks and assumptions
-- incomplete implementation notes if any
+- method plan
+- cleaned data paths
+- field mapping
+- expected result paths
+- expected figure paths
+- runtime notes
+- implementation constraints
 
-Do not hand off directly to `paper-section-writer` or `quality-assurance-auditor`.
+If `implementation.target = matlab`, hand off to:
+
+```
+matlab-model-code-generator
+```
+
+Include:
+
+- method plan
+- cleaned data paths
+- field mapping
+- expected result paths
+- expected figure paths
+- runtime notes
+- MATLAB / 北太天元 compatibility requirements
+
+If blocked, hand back to:
+
+- `method-selector` for missing or wrong implementation target
+- `data-auditor-cleaner` for missing cleaned data
+- `workflow-orchestrator` for unresolved routing conflicts
 
 # Examples
 
-## Example 1: Generate evaluation model code
+## Example 1: Route to MATLAB / 北太天元
 
 Input state:
 
-- Q1 method plan includes equal-weight baseline and entropy-weight TOPSIS.
-- Cleaned data exists at `workspace/data_clean/indicator_data.csv`.
+- method plan exists
+- cleaned data exists
+- `implementation.target = matlab`
+- runtime notes include `beita-tianyuan-compatible`
 
 Output:
 
 ```json
 {
-  "code_generation_summary": {
-    "language": "python",
-    "generated_scripts": [
-      "workspace/scripts/model_q1.py"
+  "code_generation_route": {
+    "implementation_target": "matlab",
+    "runtime_notes": [
+      "beita-tianyuan-compatible",
+      "avoid-heavy-toolboxes"
     ],
-    "data_inputs": [
-      "workspace/data_clean/indicator_data.csv"
-    ],
-    "result_outputs": [
-      "workspace/results/q1_equal_weight_results.csv",
-      "workspace/results/q1_entropy_topsis_results.csv"
-    ],
-    "figure_outputs": [
-      "workspace/figures/q1_ranking_comparison.png"
-    ],
-    "run_instructions": [
-      "python workspace/scripts/model_q1.py"
-    ],
-    "known_risks": [
-      "Indicator directions must match the method plan before interpretation."
-    ],
-    "recommended_next_skill": "code-reviewer"
+    "next_skill": "matlab-model-code-generator",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "cleaned_data": [
+        "workspace/data_clean/clean_data.csv"
+      ],
+      "expected_scripts_dir": "workspace/scripts/matlab/",
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/"
+    }
   }
 }
 ```
 
-## Example 2: Blocked by missing cleaned data
+## Example 2: Route to Python
 
 Input state:
 
-- Method plan exists.
-- Raw data exists.
-- No cleaned data exists.
+- method plan exists
+- cleaned data exists
+- `implementation.target = python`
 
 Output:
 
 ```json
 {
-  "blocked_items": [
-    "Cleaned data is required before model code generation."
-  ],
-  "recommended_next_skill": "data-auditor-cleaner",
-  "recommended_next_action": "Audit and clean the raw data, then provide cleaned data paths and field mapping."
+  "code_generation_route": {
+    "implementation_target": "python",
+    "runtime_notes": [],
+    "next_skill": "python-model-code-generator",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "cleaned_data": [
+        "workspace/data_clean/clean_data.csv"
+      ],
+      "expected_scripts_dir": "workspace/scripts/python/",
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/"
+    }
+  }
 }
 ```
 
-## Example 3: Blocked by method-data mismatch
+## Example 3: Blocked by missing target
 
 Input state:
 
-- Method plan requires a labeled target variable.
-- Cleaned data has features but no target label.
+- method plan exists
+- no `implementation.target`
 
 Output:
 
 ```json
 {
-  "blocked_items": [
-    "The selected supervised model requires a target label, but no label field exists in the cleaned data."
-  ],
-  "affected_model": "Q2 main model",
-  "recommended_next_skill": "method-selector",
-  "recommended_next_action": "Revise the method plan to use an unsupervised, descriptive, or proxy-based approach, or provide valid labeled data."
+  "code_generation_route": {
+    "status": "blocked",
+    "blocked_items": [
+      "implementation.target is missing from the method plan."
+    ],
+    "recommended_next_skill": "method-selector",
+    "recommended_next_action": "Update the method plan with implementation.target = python or matlab."
+  }
 }
 ```
+
+## Example 4: Blocked by target conflict
+
+Input state:
+
+- contest requires MATLAB / 北太天元
+- method plan says `implementation.target = python`
+
+Output:
+
+~~~json
+{
+  "code_generation_route": {
+    "status": "blocked",
+    "blocked_items": [
+      "Contest requirements specify MATLAB / 北太天元, but the method plan targets Python."
+    ],
+    "recommended_next_skill": "method-selector",
+    "recommended_next_action": "Revise the implementation target or explicitly justify the mixed-language workflow."
+  }
+}
+写完后同步：
+
+```bash
+cp .claude/skills/model-code-generator/SKILL.md .codex/skills/model-code-generator/SKILL.md
+diff -u .claude/skills/model-code-generator/SKILL.md .codex/skills/model-code-generator/SKILL.md
+~~~

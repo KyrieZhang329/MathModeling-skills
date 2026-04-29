@@ -19,7 +19,7 @@ The real problems in mathematical modeling contests often do not come from “no
 
 ## What It Does
 
-- Splits the modeling contest workflow into 11 skills, each corresponding to one stage.
+- Keeps a unified modeling workflow and branches only at code generation and code review, for 15 total skills.
 - Encourages a fixed process: read the problem, classify the subquestions, select methods, write code, check results, then draft the paper.
 - Keeps intermediate outputs such as parsed problems, method plans, data reports, results, figures, and paper drafts, so that every important number can be traced back to its source.
 - Uses the same skill set for Claude Code (`.claude/skills/`) and Codex (`.codex/skills/`).
@@ -42,8 +42,12 @@ The real problems in mathematical modeling contests often do not come from “no
 | `problem-classifier`        | Classifies each subquestion into a task type, such as evaluation, prediction, or optimization. |
 | `method-selector`           | Selects a baseline, a main model, and optional improved models for each subquestion. |
 | `data-auditor-cleaner`      | Audits the data, reports issues, and produces cleaned data with a data report. |
-| `model-code-generator`      | Generates Python / MATLAB code according to the validated method plan. |
-| `code-reviewer`             | Reviews and fixes code issues, including bugs, method mismatches, and unnecessary complexity. |
+| `model-code-generator`      | Router that reads `implementation.target` and hands off to the correct language-specific code generator. |
+| `python-model-code-generator` | Generates Python modeling code when the implementation target is `python`. |
+| `matlab-model-code-generator` | Generates MATLAB / 北太天元 compatible modeling code when the implementation target is `matlab`. |
+| `code-reviewer`             | Router that inspects script families and hands off to the correct language-specific reviewer. |
+| `python-code-reviewer`      | Reviews Python modeling code and keeps fixes minimal and traceable. |
+| `matlab-code-reviewer`      | Reviews MATLAB / 北太天元 compatible modeling code and keeps fixes minimal and traceable. |
 | `robustness-checker`        | Runs sensitivity analysis, error checks, and baseline comparisons. |
 | `figure-table-planner`      | Plans the figures and tables that are actually needed, and clarifies what each one should show. |
 | `paper-section-writer`      | Drafts paper sections using only existing results and validated artifacts. |
@@ -57,8 +61,12 @@ workflow-orchestrator
 → problem-classifier
 → method-selector
 → data-auditor-cleaner
-→ model-code-generator
-→ code-reviewer
+→ model-code-generator (router)
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
+→ code-reviewer (router)
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
 → robustness-checker
 → figure-table-planner
 → paper-section-writer
@@ -74,9 +82,13 @@ The order matters. The orchestrator is expected to keep several basic gates:
 - Do not claim “our model is better” without a baseline and sensitivity analysis.
 - Do not assemble the final paper before QA passes.
 
+For contests requiring MATLAB / 北太天元, set `implementation.target` to `matlab` and use conservative runtime notes such as `beita-tianyuan-compatible` and `avoid-heavy-toolboxes`.
+
+The language split affects only code generation and code review. Downstream skills should consume artifacts from `workspace/results/` and `workspace/figures/`, regardless of whether the scripts came from Python or MATLAB.
+
 ## Documents
 
-- [Modeling Workflow](docs/modeling-workflow.md): how the 11 skills are connected.
+- [Modeling Workflow](docs/modeling-workflow.md): how the skills are connected, including the Python / MATLAB code branches.
 - [Problem Taxonomy](docs/problem-taxonomy.md): task types used by `problem-classifier`.
 - [Method Selection Tree](docs/method-selection-tree.md): baseline, main model, and improvement choices.
 - [Design Principles](docs/design-principles.md): project-level modeling and workflow principles.
@@ -128,7 +140,9 @@ workspace/
 ├── problem/          # original problem statement and parsed problem JSON
 ├── data_raw/         # original data, unchanged
 ├── data_clean/       # cleaned data and data audit report
-├── scripts/          # generated Python / MATLAB code
+├── scripts/
+│   ├── python/       # generated Python scripts
+│   └── matlab/       # generated MATLAB / 北太天元 compatible scripts
 ├── results/          # tables, metrics, model outputs
 ├── figures/          # final figures
 ├── paper_sections/   # drafted paper sections
@@ -139,6 +153,7 @@ Two rules are worth keeping:
 
 1. Treat `data_raw/` as read-only. If data needs to be modified, copy it to `data_clean/` first.
 2. Every section under `paper_sections/` should be traceable to files under `results/`, `figures/`, or `data_clean/`.
+3. Keep `results/` and `figures/` language-neutral so downstream skills consume artifacts rather than runtime-specific code.
 
 ### **Example Prompts**
 

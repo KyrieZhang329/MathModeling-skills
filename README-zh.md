@@ -19,7 +19,7 @@
 
 ## 项目作用
 
-- 把整个比赛流程拆成 11 个 skill，每个skill对应一个阶段
+- 保持前半段建模流程统一，只在代码生成和代码审查处分支，总计 15 个 skill
 - 强制按固定流程：先读题，再分类，再选方法，再写代码，再检查，再写论文
 - 留档中间产物（解析后的题目、方法计划、数据报告、结果、图、论文草稿），任何一个数字都能回查到出处
 - Claude Code（`.claude/skills/`）和 Codex（`.codex/skills/`）共用同一套 skill
@@ -42,8 +42,12 @@
 | `problem-classifier` | 给每个子问题打题型标签（评价类、预测类、优化类等） |
 | `method-selector` | 为每个子问题选 baseline、主模型、可选的改进模型 |
 | `data-auditor-cleaner` | 审计数据，列出问题，输出清洗后的数据和一份数据报告 |
-| `model-code-generator` | 按照已经定好的方法计划生成 Python / MATLAB 代码 |
-| `code-reviewer` | 审查并修代码：bug、和方法计划对不上的地方、不必要的复杂度 |
+| `model-code-generator` | 路由 skill：读取 `implementation.target`，再把任务交给对应语言的代码生成 skill |
+| `python-model-code-generator` | 当实现目标是 `python` 时生成 Python 建模代码 |
+| `matlab-model-code-generator` | 当实现目标是 `matlab` 时生成 MATLAB / 北太天元兼容代码 |
+| `code-reviewer` | 路由 skill：识别脚本族并交给对应语言的审查 skill |
+| `python-code-reviewer` | 审查 Python 建模代码，并保持修改最小且可追踪 |
+| `matlab-code-reviewer` | 审查 MATLAB / 北太天元兼容代码，并保持修改最小且可追踪 |
 | `robustness-checker` | 跑敏感性、误差、和 baseline 的对比 |
 | `figure-table-planner` | 规划真正需要的图表，明确每张图要说明什么 |
 | `paper-section-writer` | 只用已经存在的结果起草论文分节 |
@@ -57,8 +61,12 @@ workflow-orchestrator
 → problem-classifier
 → method-selector
 → data-auditor-cleaner
-→ model-code-generator
-→ code-reviewer
+→ model-code-generator (router)
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
+→ code-reviewer (router)
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
 → robustness-checker
 → figure-table-planner
 → paper-section-writer
@@ -74,9 +82,13 @@ workflow-orchestrator
 - 没有 baseline 和敏感性分析，就不写"我们的模型更好"
 - QA 没过不组装最终论文
 
+如果比赛要求 MATLAB / 北太天元，就把 `implementation.target` 设为 `matlab`，并配合 `beita-tianyuan-compatible`、`avoid-heavy-toolboxes` 这类保守兼容说明。
+
+语言分支只影响代码生成和代码审查。后面的 skill 继续只看 `workspace/results/` 和 `workspace/figures/` 下的产物，不关心它们来自 Python 还是 MATLAB。
+
 ## 文档索引
 
-- [Modeling Workflow](docs/modeling-workflow.md): how the 11 skills are connected.
+- [Modeling Workflow](docs/modeling-workflow.md)：说明整体流程，以及 Python / MATLAB 代码分支如何接入。
 - [Problem Taxonomy](docs/problem-taxonomy.md): task types used by `problem-classifier`.
 - [Method Selection Tree](docs/method-selection-tree.md): baseline, main model, and improvement choices.
 - [Design Principles](docs/design-principles.md): project-level modeling and workflow principles.
@@ -128,7 +140,9 @@ workspace/
 ├── problem/          # 原始题目、解析后的题目 JSON
 ├── data_raw/         # 原始数据，不动
 ├── data_clean/       # 清洗后的数据和数据审计报告
-├── scripts/          # 生成的 Python / MATLAB 代码
+├── scripts/
+│   ├── python/       # 生成的 Python 脚本
+│   └── matlab/       # 生成的 MATLAB / 北太天元兼容脚本
 ├── results/          # 表格、指标、模型输出
 ├── figures/          # 最终图表
 ├── paper_sections/   # 论文分节草稿
@@ -137,6 +151,7 @@ workspace/
 
 1. `data_raw/` 视为只读。要改数据，先复制一份到 `data_clean/` 再改
 2. `paper_sections/` 里的每一段都应该能追溯到 `results/`、`figures/` 或 `data_clean/` 下的某个文件
+3. `results/` 和 `figures/` 保持语言中立，让下游 skill 消费产物，而不是依赖具体运行时。
 
 ### 示例 prompt
 

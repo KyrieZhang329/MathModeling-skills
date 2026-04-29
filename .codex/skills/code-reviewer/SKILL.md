@@ -1,382 +1,466 @@
 ---
 name: code-reviewer
-description: Review, debug, simplify, and verify mathematical modeling code.
+description: Route generated modeling scripts to Python or MATLAB code review skills based on implementation target and script language.
 license: MIT
 ---
 
 # Purpose
 
-Review, debug, simplify, and verify code used in a mathematical modeling contest workflow.
+Route generated modeling scripts to the correct language-specific code reviewer.
 
-This skill checks whether generated modeling code is runnable, reproducible, consistent with the validated method plan, and safe to use for producing result artifacts. It may make minimal fixes when needed, but it must not change the modeling route or silently alter assumptions.
+This skill reads the validated method plan, checks `implementation.target`, inspects available script files, and hands off review work to either `python-code-reviewer` or `matlab-code-reviewer`.
 
-This skill does not select models, clean raw data, invent results, perform full robustness analysis, write paper sections, or approve final submission.
+This skill does not perform deep language-specific code review itself. It only decides which reviewer should inspect which scripts.
 
 # When to use
 
 Use this skill:
 
-- After `model-code-generator` has produced modeling scripts.
-- When code fails to run or produces unexpected outputs.
-- When generated scripts need to be checked before producing final results.
-- When paths, data fields, dimensions, formulas, seeds, or output artifacts need verification.
-- Before `robustness-checker`.
+- After `python-model-code-generator` or `matlab-model-code-generator` has generated scripts.
+- When generated scripts need to be reviewed before results are trusted.
+- When the workflow reaches the code review stage.
+- When script language may be Python, MATLAB, or a clearly specified mixed-language workflow.
+- When contest requirements specify MATLAB / 北太天元 compatibility.
 
 # Preconditions
 
 The following should already exist or be provided:
 
 - A validated method plan.
-- Generated modeling scripts under `workspace/scripts/` or equivalent.
-- Cleaned data under `workspace/data_clean/`, if the code requires data.
-- Expected result artifacts from `model-code-generator`.
-- Run instructions or intended execution command.
-- Data audit report and field mapping if data is used.
+- An `implementation` object in the method plan.
+- Generated scripts under a language-specific scripts directory.
+- Cleaned data or approved non-tabular inputs.
+- Expected result and figure output paths.
+- Run instructions or intended script order.
 
-If the generated code is missing, hand back to `model-code-generator`.
+The method plan should contain:
 
-If cleaned data is missing, hand back to `data-auditor-cleaner`.
+```json
+{
+  "implementation": {
+    "target": "matlab",
+    "runtime_notes": [
+      "beita-tianyuan-compatible",
+      "avoid-heavy-toolboxes"
+    ]
+  }
+}
+```
+
+Expected script locations:
+
+```text
+workspace/scripts/python/
+workspace/scripts/matlab/
+```
+
+Expected shared output locations:
+
+```text
+workspace/results/
+workspace/figures/
+```
 
 # Inputs
 
 Use or request:
 
-- Script paths under `workspace/scripts/`.
-- Cleaned data paths under `workspace/data_clean/`.
-- Method plan and expected outputs.
-- Data field mapping and data audit report.
-- Current error messages, stack traces, logs, or failed outputs if available.
-- Expected result paths under `workspace/results/`.
-- Expected figure paths under `workspace/figures/`.
-- Preferred language or runtime environment if relevant.
+- `workspace/problem/method_plan.json`, if available.
+- generated Python scripts under `workspace/scripts/python/`
+- generated MATLAB scripts under `workspace/scripts/matlab/`
+- data audit report, if available
+- cleaned data paths
+- expected result paths
+- expected figure paths
+- run instructions
+- runtime notes
+- user-provided contest language requirements if relevant
 
 # Workflow
 
-1. Inspect the code purpose.
-   - Identify which subquestion each script supports.
-   - Identify whether it implements a baseline, main model, improved model, or utility step.
-   - Compare the script intent with the method plan.
-
-2. Check execution readiness.
-   - Verify imports and dependencies.
-   - Verify relative paths.
-   - Verify cleaned data inputs.
-   - Verify output directories and file names.
-   - Verify run instructions.
-
-3. Check data and shape consistency.
-   - Confirm required fields exist in the cleaned data.
-   - Check column names, data types, missing values, and expected units where relevant.
-   - Check array, matrix, table, and vector dimensions.
-   - Check train-test splits and feature-target separation for predictive tasks.
-
-4. Check numerical and modeling safety.
-   - Check division by zero.
-   - Check `NaN`, `inf`, and invalid operations.
-   - Check random seed usage.
-   - Check parameter ranges.
-   - Check convergence or stopping criteria where applicable.
-   - Check whether formulas match the method plan.
-
-5. Check artifact generation.
-   - Verify result tables are saved under `workspace/results/`.
-   - Verify figures are saved under `workspace/figures/`.
-   - Verify intermediate outputs needed for explanation are saved.
-   - Verify file names clearly indicate subquestion and model role.
-
-6. Make minimal fixes if needed.
-   - Fix syntax errors, path errors, import errors, field name mismatches, shape issues, and obvious runtime blockers.
-   - Keep changes surgical and traceable.
-   - Do not perform broad refactors unless necessary for correctness.
-   - Do not change the model route.
-
-7. Produce a review report.
-   - State what was checked.
-   - State what was changed.
-   - State how to run the code.
-   - State remaining risks.
-   - Recommend the next skill.
+1. Read the method plan.
+   - Confirm that it is validated.
+   - Confirm that it includes `implementation.target`.
+   - Confirm that the target is either `python` or `matlab`.
+2. Inspect generated scripts.
+   - Identify `.py` scripts.
+   - Identify `.m` scripts.
+   - Check whether scripts are stored under the expected language-specific directory.
+   - Check whether script types match the implementation target.
+3. Resolve the review route.
+   - If `implementation.target = python`, route Python scripts to `python-code-reviewer`.
+   - If `implementation.target = matlab`, route MATLAB scripts to `matlab-code-reviewer`.
+   - If script files conflict with the implementation target, stop and report a blocker.
+   - If a mixed-language workflow is explicitly specified, route each script family separately.
+4. Prepare handoff context.
+   - Include script paths.
+   - Include method plan path.
+   - Include cleaned data paths.
+   - Include expected output paths.
+   - Include runtime notes.
+   - Include known implementation risks.
+5. Hand off to the language-specific reviewer.
+   - Do not perform language-specific review inside this router.
+   - Do not modify scripts inside this router.
+   - Do not change the method plan.
+   - Do not invent outputs or assume scripts are correct.
 
 # Outputs
 
-Produce reviewed code artifacts and a review summary such as:
+Produce a routing decision containing:
 
-- corrected scripts under `workspace/scripts/`
-- updated run instructions
-- code review report
-- list of fixed issues
-- list of remaining risks
-- expected result and figure paths
-- recommended next skill
+- `implementation_target`
+- `detected_script_languages`
+- `script_groups`
+- `next_skill`
+- `handoff_context`
+- `blocked_items`, if routing cannot proceed
+- `recommended_next_action`, if blocked
 
 # Output format
 
-Prefer this JSON-compatible summary:
+Prefer this JSON-compatible structure:
 
 ```json
 {
-  "code_review_summary": {
-    "reviewed_scripts": [
-      "workspace/scripts/model_q1.py"
+  "code_review_route": {
+    "implementation_target": "matlab",
+    "detected_script_languages": [
+      "matlab"
     ],
-    "status": "passed_with_warnings",
-    "fixed_issues": [
-      {
-        "type": "path_error",
-        "file": "workspace/scripts/model_q1.py",
-        "change": "Replaced absolute input path with workspace/data_clean/indicator_data.csv."
-      }
-    ],
-    "remaining_risks": [
-      "Indicator directions must still be verified against the method plan."
-    ],
-    "run_instructions": [
-      "python workspace/scripts/model_q1.py"
-    ],
-    "expected_outputs": [
-      "workspace/results/q1_main_results.csv",
-      "workspace/figures/q1_ranking_comparison.png"
-    ],
-    "recommended_next_skill": "robustness-checker"
+    "script_groups": {
+      "matlab": [
+        "workspace/scripts/matlab/q1_main.m",
+        "workspace/scripts/matlab/q1_baseline.m"
+      ]
+    },
+    "next_skill": "matlab-code-reviewer",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "cleaned_data": [
+        "workspace/data_clean/clean_data.csv"
+      ],
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/",
+      "runtime_notes": [
+        "beita-tianyuan-compatible",
+        "avoid-heavy-toolboxes"
+      ]
+    }
   }
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+If blocked, use:
 
-# Review checklist
+```json
+{
+  "code_review_route": {
+    "status": "blocked",
+    "blocked_items": [
+      "implementation.target is matlab, but only Python scripts were found."
+    ],
+    "recommended_next_skill": "model-code-generator",
+    "recommended_next_action": "Regenerate scripts for the MATLAB target or update the method plan if Python is intended."
+  }
+}
+```
 
-Check at least the following:
+# Routing rules
 
-## Structural checks
+- `.py` scripts route to `python-code-reviewer`.
+- `.m` scripts route to `matlab-code-reviewer`.
+- `implementation.target = python` should normally correspond to `.py` scripts under `workspace/scripts/python/`.
+- `implementation.target = matlab` should normally correspond to `.m` scripts under `workspace/scripts/matlab/`.
+- MATLAB / 北太天元 compatibility is handled by `matlab-code-reviewer`.
+- Do not treat 北太天元 as a separate third implementation target.
+- Do not route `.m` scripts to the Python reviewer.
+- Do not route `.py` scripts to the MATLAB reviewer.
+- Do not perform mixed-language routing unless the method plan explicitly describes a mixed-language workflow.
+- If the method plan and script files conflict, stop and report a blocker.
 
-- script maps to a specific subquestion
-- script maps to baseline, main, or improved model
-- code follows the validated method plan
-- code does not silently change the selected model
-- functions or sections are understandable
-- unnecessary complexity is avoided
+# Target conventions
 
-## Runtime checks
+## Python review route
 
-- imports are available or reasonable
-- paths are relative where practical
-- required input files exist or are requested
-- output directories are used correctly
-- run instructions are provided
-- scripts can be executed in a clear order
+Route to `python-code-reviewer` when:
 
-## Data checks
+- `implementation.target = python`
+- generated scripts are `.py`
+- scripts are under `workspace/scripts/python/`
+- Python was explicitly requested and allowed by contest rules
 
-- cleaned data is used instead of raw data
-- required columns exist
-- field names match the data audit mapping
-- data types are compatible with operations
-- missing values are handled or flagged
-- array and matrix dimensions are valid
-- train-test split avoids leakage where relevant
+Expected review scope:
 
-## Numerical checks
+- imports
+- relative paths
+- pandas / numpy shape consistency
+- column names and data mapping
+- random seeds
+- leakage risks
+- result saving
+- figure saving
+- method-plan consistency
 
-- no avoidable division by zero
-- no uncontrolled `NaN` or `inf`
-- random seeds are fixed when randomness is used
-- parameter ranges are reasonable
-- convergence or iteration limits are defined where needed
-- objective functions and metrics are computed consistently
+## MATLAB / 北太天元 review route
 
-## Modeling consistency checks
+Route to `matlab-code-reviewer` when:
 
-- baseline output is generated when required
-- main model implements the selected method
-- improved model is optional and clearly separated
-- formulas and variables correspond to the method plan
-- validation outputs are available or planned
-- generated figures support expected model outputs
+- `implementation.target = matlab`
+- generated scripts are `.m`
+- scripts are under `workspace/scripts/matlab/`
+- contest requires MATLAB / 北太天元
+- runtime notes include compatibility requirements
 
-## Artifact checks
+Expected review scope:
 
-- scripts are under `workspace/scripts/`
-- result tables are under `workspace/results/`
-- figures are under `workspace/figures/`
-- important intermediate results are saved
-- file names are traceable to subquestions and model roles
-- no raw data files are overwritten
-
-# Fixing rules
-
-- Make the smallest necessary change.
-- Preserve existing style where practical.
-- Fix only issues connected to the requested code review.
-- Remove only unused imports or variables introduced by the fix.
-- Do not refactor unrelated code.
-- Do not optimize for cleverness.
-- Do not hide assumptions inside code.
-- Do not change the mathematical model unless the method plan is impossible to implement.
-- If a model-plan issue is found, report it and hand back to `method-selector`.
-- If a data-readiness issue is found, report it and hand back to `data-auditor-cleaner`.
+- `.m` script runnability
+- MATLAB / 北太天元 compatibility
+- 1-based indexing
+- row and column vector consistency
+- matrix dimensions
+- `readtable` / `writetable` usage
+- `rng` usage
+- toolbox dependency risk
+- result saving
+- figure saving
+- method-plan consistency
 
 # Rules
 
-- Do not fabricate data, labels, metrics, or outputs.
-- Do not change the modeling route silently.
-- Do not convert placeholder outputs into fake results.
-- Do not write paper text.
-- Do not perform final QA.
-- Do not approve final submission.
-- Do not overwrite raw data.
-- Do not make broad style rewrites.
-- Do not add heavy dependencies unless required and justified.
-- Do not claim the code is correct unless run instructions and output expectations are clear.
-- Mark remaining risks explicitly.
+- Do not perform deep language-specific code review.
+- Do not modify code inside this router.
+- Do not change the method plan.
+- Do not change the implementation target.
+- Do not fabricate script paths, results, figures, metrics, or logs.
+- Do not approve code as correct.
+- Do not route scripts to a reviewer if the target is ambiguous.
+- Do not ignore conflicts between target and script language.
+- Do not bypass language-specific reviewers.
+- Preserve workflow gates.
 
 # Verification
 
-Before handing off, verify:
+Before handoff, verify:
 
-- Reviewed scripts match the method plan.
-- Scripts can be run or have clear blockers.
-- Input paths point to cleaned data or approved non-tabular inputs.
-- Output paths are under the correct workspace directories.
-- Baseline outputs exist or are explicitly blocked.
-- Main model outputs exist or are explicitly blocked.
-- Randomness is controlled where relevant.
-- The code does not write into `workspace/data_raw/`.
-- Fixed issues are listed.
-- Remaining risks are listed.
-- The next skill is `robustness-checker` if code is usable.
+- The method plan exists or is provided.
+- `implementation.target` is present.
+- The target is either `python` or `matlab`.
+- Generated scripts exist or are explicitly listed.
+- Script extensions match the intended target.
+- Script directories are language-specific where practical:
+  - `workspace/scripts/python/`
+  - `workspace/scripts/matlab/`
+- Expected result and figure directories remain language-neutral:
+  - `workspace/results/`
+  - `workspace/figures/`
+- Runtime notes are preserved.
+- The next skill is correct.
 
 # Failure modes
 
 Stop and report a blocker if:
 
-- No script is available to review.
-- The method plan is unavailable.
-- Required cleaned data is unavailable.
-- Required fields are missing.
-- Runtime errors cannot be fixed without changing the model route.
-- The code depends on unavailable heavy dependencies.
-- The code output cannot be linked to any subquestion.
-- The user asks for paper claims before verified outputs exist.
+- The method plan is missing.
+- `implementation.target` is missing.
+- `implementation.target` is not `python` or `matlab`.
+- No scripts are available to review.
+- Script language conflicts with the implementation target.
+- Scripts are mixed-language but the method plan does not allow mixed-language workflow.
+- Generated scripts cannot be linked to any subquestion.
+- Review routing would require changing the modeling method.
+- Required cleaned data is missing.
 
 # Stop conditions
 
 This skill must stop instead of guessing when:
 
-- A fix would change the mathematical meaning of the model.
-- A fix requires inventing data, labels, parameters, or results.
-- A script cannot be mapped to the method plan.
-- The data schema is too ambiguous to repair safely.
-- The code would overwrite validated artifacts without permission.
-- The error indicates that the method plan is infeasible.
+- The implementation target is ambiguous.
+- Script extensions are inconsistent with the target.
+- Contest rules require MATLAB / 北太天元 but only Python scripts exist.
+- The method plan says Python but only MATLAB scripts exist.
+- A mixed-language workflow is present but undocumented.
+- Continuing would hide a code-generation or method-plan error.
 
 When stopping, output:
 
-- the blocker
+- blocker
 - why it matters
-- affected script or subquestion
-- safe partial fixes if any
-- missing information needed
-- recommended next action
+- affected scripts
+- affected method plan item
+- recommended repair skill
+- next action
 
 # Handoff
 
-If reviewed code is usable, hand off to:
+If routing to Python review, hand off to:
 
-`robustness-checker`
+```
+python-code-reviewer
+```
 
-The handoff should include:
+Include:
 
-- reviewed script paths
+- Python script paths
+- method plan
+- cleaned data paths
+- expected result paths
+- expected figure paths
+- runtime notes
 - run instructions
-- result output paths
-- figure output paths
-- fixed issue list
-- remaining risk list
-- validation outputs if available
+- known implementation risks
 
-If code is blocked by data issues, hand off to:
+If routing to MATLAB review, hand off to:
 
-`data-auditor-cleaner`
+```
+matlab-code-reviewer
+```
 
-If code is blocked by method-plan issues, hand off to:
+Include:
 
-`method-selector`
+- MATLAB script paths
+- method plan
+- cleaned data paths
+- expected result paths
+- expected figure paths
+- runtime notes
+- MATLAB / 北太天元 compatibility requirements
+- run instructions
+- known implementation risks
 
-Do not hand off directly to `paper-section-writer` or `quality-assurance-auditor`.
+If blocked, hand back to:
+
+- `model-code-generator` for missing or wrong script generation
+- `method-selector` for target conflict
+- `data-auditor-cleaner` for missing cleaned data
+- `workflow-orchestrator` for unresolved mixed-language routing
 
 # Examples
 
-## Example 1: Path and output fix
+## Example 1: Route MATLAB scripts to MATLAB reviewer
 
 Input state:
 
-- `workspace/scripts/model_q1.py` uses an absolute local input path.
-- Method plan expects output under `workspace/results/`.
+- `implementation.target = matlab`
+- scripts exist under `workspace/scripts/matlab/`
 
 Output:
 
 ```json
 {
-  "code_review_summary": {
-    "status": "passed_with_warnings",
-    "reviewed_scripts": [
-      "workspace/scripts/model_q1.py"
+  "code_review_route": {
+    "implementation_target": "matlab",
+    "detected_script_languages": [
+      "matlab"
     ],
-    "fixed_issues": [
-      {
-        "type": "path_error",
-        "change": "Replaced absolute local input path with a relative path under workspace/data_clean/."
-      },
-      {
-        "type": "artifact_path",
-        "change": "Changed result export path to workspace/results/q1_main_results.csv."
-      }
-    ],
-    "remaining_risks": [
-      "Input column units still need confirmation before paper interpretation."
-    ],
-    "recommended_next_skill": "robustness-checker"
+    "script_groups": {
+      "matlab": [
+        "workspace/scripts/matlab/q1_baseline.m",
+        "workspace/scripts/matlab/q1_main.m"
+      ]
+    },
+    "next_skill": "matlab-code-reviewer",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/",
+      "runtime_notes": [
+        "beita-tianyuan-compatible",
+        "avoid-heavy-toolboxes"
+      ]
+    }
   }
 }
 ```
 
-## Example 2: Blocked by method mismatch
+## Example 2: Route Python scripts to Python reviewer
 
 Input state:
 
-- Method plan specifies linear programming.
-- Code implements a genetic algorithm without explanation.
+- `implementation.target = python`
+- scripts exist under `workspace/scripts/python/`
 
 Output:
 
 ```json
 {
-  "blocked_items": [
-    "The script implements a genetic algorithm, but the validated method plan specifies linear programming."
-  ],
-  "affected_script": "workspace/scripts/model_q3.py",
-  "recommended_next_skill": "method-selector",
-  "recommended_next_action": "Confirm whether the method plan should be revised or the code should be regenerated according to the original linear programming plan."
+  "code_review_route": {
+    "implementation_target": "python",
+    "detected_script_languages": [
+      "python"
+    ],
+    "script_groups": {
+      "python": [
+        "workspace/scripts/python/q2_baseline.py",
+        "workspace/scripts/python/q2_main.py"
+      ]
+    },
+    "next_skill": "python-code-reviewer",
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/"
+    }
+  }
 }
 ```
 
-## Example 3: Blocked by missing field
+## Example 3: Blocked by target-script conflict
 
 Input state:
 
-- Script requires column `demand`.
-- Cleaned data does not contain `demand`.
+- `implementation.target = matlab`
+- only Python scripts are found
 
 Output:
 
 ```json
 {
-  "blocked_items": [
-    "The script requires the field demand, but the cleaned data does not contain it."
-  ],
-  "affected_script": "workspace/scripts/model_q2.py",
-  "recommended_next_skill": "data-auditor-cleaner",
-  "recommended_next_action": "Recheck field mapping and confirm whether a demand field exists under another name."
+  "code_review_route": {
+    "status": "blocked",
+    "blocked_items": [
+      "implementation.target is matlab, but only Python scripts were found."
+    ],
+    "recommended_next_skill": "model-code-generator",
+    "recommended_next_action": "Regenerate MATLAB scripts or revise the method plan if Python is intended."
+  }
+}
+```
+
+## Example 4: Mixed-language workflow
+
+Input state:
+
+- method plan explicitly allows mixed-language workflow
+- Python preprocessing script and MATLAB model script both exist
+
+Output:
+
+```json
+{
+  "code_review_route": {
+    "implementation_target": "mixed",
+    "detected_script_languages": [
+      "python",
+      "matlab"
+    ],
+    "script_groups": {
+      "python": [
+        "workspace/scripts/python/preprocess.py"
+      ],
+      "matlab": [
+        "workspace/scripts/matlab/q1_main.m"
+      ]
+    },
+    "next_skill": [
+      "python-code-reviewer",
+      "matlab-code-reviewer"
+    ],
+    "handoff_context": {
+      "method_plan": "workspace/problem/method_plan.json",
+      "expected_results_dir": "workspace/results/",
+      "expected_figures_dir": "workspace/figures/"
+    }
+  }
 }
 ```
