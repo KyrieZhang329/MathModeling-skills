@@ -1,5 +1,7 @@
 # MathModeling-skills
 
+[English](./README.md) | [简体中文](./README-zh.md)
+
 一套用于数学建模竞赛的 Claude Code / Codex Skills，把比赛流程拆成可以一步步走完的小阶段
 
 ## 项目初衷

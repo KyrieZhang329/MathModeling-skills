@@ -1,5 +1,7 @@
 # Modeling Workflow
 
+[English](./modeling-workflow.md) | [简体中文](./modeling-workflow-zh.md)
+
 This document explains how the 11 skills in `MathModeling-skills` are connected during a mathematical modeling contest.
 
 The goal is not to force every contest problem into the same solution pattern. The goal is to reduce common workflow mistakes: reading the problem too loosely, choosing methods too early, writing code before the model is clear, writing paper conclusions before results exist, or writing claims that cannot be traced back to result files.
@@ -425,5 +427,4 @@ A typical sequence is:
 This workflow does not replace modeling judgment. It is a guardrail.
 
 You can skip or merge stages when there is a good reason, but the choice should be explicit. If a result, figure, or claim cannot be traced back to an artifact, treat it as unfinished.
-
 

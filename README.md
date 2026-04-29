@@ -1,5 +1,7 @@
 # MathModeling-skills
 
+[English](./README.md) | [简体中文](./README-zh.md)
+
 A set of Claude Code / Codex Skills for mathematical modeling contests, breaking the contest workflow into small stages that can be completed step by step.
 
 ## Project Motivation

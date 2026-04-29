@@ -1,5 +1,7 @@
 # Initial Prompt
 
+[English](<./Initial Prompt.md>) | [简体中文](<./Initial Prompt-zh.md>)
+
 
 
 You are helping me work through a mathematical modeling contest problem using this repository.

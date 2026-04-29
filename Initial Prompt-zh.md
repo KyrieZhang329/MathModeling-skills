@@ -1,5 +1,7 @@
 # Initial Prompt
 
+[English](<./Initial Prompt.md>) | [简体中文](<./Initial Prompt-zh.md>)
+
 你正在使用本仓库帮助我完成一道数学建模竞赛题。
 
 在开始建模、写代码或写论文之前，请先阅读项目规则和 skills：
