@@ -2,7 +2,7 @@
 
 [English](./modeling-workflow.md) | [简体中文](./modeling-workflow-zh.md)
 
-This document explains how the 11 skills in `MathModeling-skills` are connected during a mathematical modeling contest.
+This document explains how the skills in `MathModeling-skills` are connected during a mathematical modeling contest.
 
 The goal is not to force every contest problem into the same solution pattern. The goal is to reduce common workflow mistakes: reading the problem too loosely, choosing methods too early, writing code before the model is clear, writing paper conclusions before results exist, or writing claims that cannot be traced back to result files.
 
@@ -12,10 +12,15 @@ The goal is not to force every contest problem into the same solution pattern. T
 workflow-orchestrator
 → problem-parser
 → problem-classifier
+→ related-paper-analyzer
 → method-selector
 → data-auditor-cleaner
-→ model-code-generator
-→ code-reviewer
+→ model-code-generator (router)
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
+→ code-reviewer (router)
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
 → robustness-checker
 → figure-table-planner
 → paper-section-writer
@@ -108,22 +113,54 @@ Each stage should leave an artifact that the next stage can inspect.
 - unclear required output
 - subquestion too vague to classify
 
-**Next step:** `method-selector`.
+**Next step:** `related-paper-analyzer`.
 
-### **4. method-selector**
+### **4. related-paper-analyzer**
 
-**Role:** Choose a feasible modeling route for each subquestion.
+**Role:** Collect and analyze relevant papers, reports, and transferable method ideas before final method selection.
 
 **Inputs:**
 
 - problem parse
 - problem classification
+- contest constraints
+- known data scope
+- accessible references if available
+
+**Outputs:**
+
+- literature summary
+- candidate transferable methods
+- reference risks
+- assumptions worth checking
+- notes for method comparison
+
+**Common blockers:**
+
+- no accessible references
+- references do not match the task type
+- source quality is unclear
+- user expects invented citations or unsupported copying
+
+**Next step:** `method-selector`.
+
+### **5. method-selector**
+
+**Role:** Compare 2-4 feasible modeling schemes for each subquestion and recommend one execution route.
+
+**Inputs:**
+
+- problem parse
+- problem classification
+- related paper analysis
 - data inventory
 - contest constraints
 - team constraints if relevant
 
 **Outputs:**
 
+- 2-4 candidate schemes per subquestion
+- recommended scheme for execution
 - baseline model
 - main model
 - optional improved model
@@ -139,7 +176,7 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** Usually `data-auditor-cleaner`.
 
-### **5. data-auditor-cleaner**
+### **6. data-auditor-cleaner**
 
 **Role:** Check and prepare data for modeling.
 
@@ -167,9 +204,9 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `model-code-generator` if data is ready; otherwise return to `method-selector`.
 
-### **6. model-code-generator**
+### **7. model-code-generator**
 
-**Role:** Generate executable code from the validated method plan.
+**Role:** Route the validated method plan to the correct code generation branch.
 
 **Inputs:**
 
@@ -177,9 +214,11 @@ Each stage should leave an artifact that the next stage can inspect.
 - cleaned data
 - expected outputs
 - validation needs
+- implementation target
 
 **Outputs:**
 
+- routed implementation target
 - model scripts
 - result output paths
 - figure output paths
@@ -195,9 +234,9 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `code-reviewer`.
 
-### **7. code-reviewer**
+### **8. code-reviewer**
 
-**Role:** Review and fix modeling code before relying on its outputs.
+**Role:** Route reviewed script families to the correct language-specific reviewer before relying on their outputs.
 
 **Inputs:**
 
@@ -206,6 +245,7 @@ Each stage should leave an artifact that the next stage can inspect.
 - method plan
 - run instructions
 - error logs if any
+- implementation target
 
 **Outputs:**
 
@@ -223,7 +263,7 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `robustness-checker`.
 
-### **8. robustness-checker**
+### **9. robustness-checker**
 
 **Role:** Check whether results are stable enough to support claims.
 
@@ -252,7 +292,7 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `figure-table-planner`.
 
-### **9. figure-table-planner**
+### **10. figure-table-planner**
 
 **Role:** Decide which figures and tables are needed in the paper, and what argument each one should support.
 
@@ -281,7 +321,7 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `paper-section-writer`.
 
-### **10. paper-section-writer**
+### **11. paper-section-writer**
 
 **Role:** Draft paper sections from existing artifacts.
 
@@ -310,7 +350,7 @@ Each stage should leave an artifact that the next stage can inspect.
 
 **Next step:** `quality-assurance-auditor`.
 
-### **11. quality-assurance-auditor**
+### **12. quality-assurance-auditor**
 
 **Role:** Perform the final solution audit before assembly or submission.
 
@@ -427,4 +467,3 @@ A typical sequence is:
 This workflow does not replace modeling judgment. It is a guardrail.
 
 You can skip or merge stages when there is a good reason, but the choice should be explicit. If a result, figure, or claim cannot be traced back to an artifact, treat it as unfinished.
-

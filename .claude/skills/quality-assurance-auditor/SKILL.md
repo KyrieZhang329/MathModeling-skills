@@ -38,21 +38,21 @@ The following should already exist or be provided:
 
 If paper sections are missing, hand back to `paper-section-writer`.
 
-If model results are missing, hand back to `model-code-generator` or `code-reviewer`.
+If model results are missing, hand back to `python-model-code-generator`, `matlab-model-code-generator`, or `code-reviewer`.
 
 # Inputs
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`
-- `workspace/problem/problem_classification.json`
-- `workspace/problem/method_plan.json`
-- `workspace/results/data_report.md`
+- `workspace/problem/problem-parser/problem_parse.json`
+- `workspace/problem/problem-classifier/problem_classification.json`
+- `workspace/problem/method-selector/method_plan.json`
+- `workspace/data/data_report.md`
 - result files under `workspace/results/`
 - robustness reports and sensitivity tables under `workspace/results/`
 - figures under `workspace/figures/`
 - paper drafts under `workspace/paper_sections/`
-- generated scripts under `workspace/scripts/`
+- generated code under `workspace/code/`
 - contest requirements or submission rules if available
 
 # Workflow
@@ -105,6 +105,7 @@ Use or request:
 
 Produce a QA report containing:
 
+- `workspace/qa_report.md`
 - `qa_status`
 - `blocking_issues`
 - `minor_issues`
@@ -117,7 +118,7 @@ Produce a QA report containing:
 
 # Output format
 
-Prefer this JSON-compatible structure:
+Prefer this JSON-compatible structure for the QA summary, and also save a Markdown report at `workspace/qa_report.md`:
 
 ```json
 {
@@ -127,7 +128,7 @@ Prefer this JSON-compatible structure:
     {
       "issue": "Q3 has no validated result artifact.",
       "why_it_matters": "The final conclusion cannot answer all subquestions.",
-      "repair_skill": "model-code-generator"
+      "repair_skill": "python-model-code-generator or matlab-model-code-generator"
     }
   ],
   "minor_issues": [
@@ -251,7 +252,7 @@ If QA fails, hand off to the relevant upstream skill:
 - `problem-classifier` for wrong task type mapping
 - `method-selector` for model-plan issues
 - `data-auditor-cleaner` for data issues
-- `model-code-generator` for missing result generation
+- `python-model-code-generator` or `matlab-model-code-generator` for missing result generation
 - `code-reviewer` for code or artifact issues
 - `robustness-checker` for missing stability evidence
 - `figure-table-planner` for unsupported visuals

@@ -30,8 +30,8 @@ The following should already exist or be provided:
 
 - A validated method plan.
 - `implementation.target = matlab`.
-- MATLAB scripts under `workspace/scripts/matlab/`.
-- Cleaned data under `workspace/data_clean/`, if data is required.
+- MATLAB scripts under `workspace/code/matlab/`.
+- Cleaned data under `workspace/data/data_clean/`, if data is required.
 - Data audit report and field mapping if data is used.
 - Expected result paths under `workspace/results/`.
 - Expected figure paths under `workspace/figures/`.
@@ -48,10 +48,10 @@ If `implementation.target` is not `matlab`, hand back to `code-reviewer`.
 
 Use or request:
 
-- `workspace/problem/method_plan.json`
-- MATLAB scripts under `workspace/scripts/matlab/`
-- cleaned data under `workspace/data_clean/`
-- `workspace/results/data_report.md`, if available
+- `workspace/problem/method-selector/method_plan.json`
+- MATLAB scripts under `workspace/code/matlab/`
+- cleaned data under `workspace/data/data_clean/`
+- `workspace/data/data_report.md`, if available
 - field mapping from `data-auditor-cleaner`
 - expected output files
 - expected figure files
@@ -69,7 +69,7 @@ Use or request:
 1. Confirm MATLAB review target.
    - Confirm `implementation.target = matlab`.
    - Confirm scripts are `.m` files.
-   - Confirm scripts are under `workspace/scripts/matlab/` or clearly documented otherwise.
+   - Confirm scripts are under `workspace/code/matlab/` or clearly documented otherwise.
    - Preserve MATLAB / 北太天元 runtime notes.
 
 2. Map scripts to the method plan.
@@ -86,8 +86,8 @@ Use or request:
    - Check that script execution order is clear.
 
 4. Check paths and artifacts.
-   - Confirm cleaned data is read from `workspace/data_clean/`.
-   - Confirm raw data under `workspace/data_raw/` is not modified.
+   - Confirm cleaned data is read from `workspace/data/data_clean/`.
+   - Confirm raw data under `workspace/data/data_raw/` is not modified.
    - Confirm results are saved under `workspace/results/`.
    - Confirm figures are saved under `workspace/figures/`.
    - Check that outputs are saved to portable formats such as `.csv`, `.mat`, and `.png`.
@@ -138,7 +138,8 @@ Use or request:
 
 Produce reviewed MATLAB code artifacts and a review summary such as:
 
-- corrected `.m` scripts under `workspace/scripts/matlab/`
+- corrected `.m` scripts under `workspace/code/matlab/`
+- `workspace/code/code-review/matlab_review_summary.md`
 - updated run instructions
 - fixed issue list
 - remaining compatibility risks
@@ -156,13 +157,13 @@ Prefer this JSON-compatible summary:
     "implementation_target": "matlab",
     "status": "passed_with_warnings",
     "reviewed_scripts": [
-      "workspace/scripts/matlab/q1_baseline.m",
-      "workspace/scripts/matlab/q1_main.m"
+      "workspace/code/matlab/Q1/q1_baseline.m",
+      "workspace/code/matlab/Q1/q1_main.m"
     ],
     "fixed_issues": [
       {
         "type": "path_error",
-        "file": "workspace/scripts/matlab/q1_main.m",
+        "file": "workspace/code/matlab/Q1/q1_main.m",
         "change": "Replaced an absolute input path with fullfile('workspace','data_clean','clean_data.csv')."
       }
     ],
@@ -170,14 +171,15 @@ Prefer this JSON-compatible summary:
       "北太天元 compatibility should be checked if the local environment lacks writematrix."
     ],
     "run_instructions": [
-      "Run workspace/scripts/matlab/q1_baseline.m",
-      "Run workspace/scripts/matlab/q1_main.m"
+      "Run workspace/code/matlab/Q1/q1_baseline.m",
+      "Run workspace/code/matlab/Q1/q1_main.m"
     ],
     "expected_outputs": [
       "workspace/results/q1_baseline_results.csv",
       "workspace/results/q1_main_results.csv",
       "workspace/figures/q1_ranking.png"
     ],
+    "markdown_summary": "workspace/code/code-review/matlab_review_summary.md",
     "recommended_next_skill": "robustness-checker"
   }
 }
@@ -318,7 +320,7 @@ Stop and report a blocker if:
 - Runtime errors cannot be fixed without changing the model.
 - The code depends on unavailable or unsupported toolbox functions.
 - The script output cannot be linked to any subquestion.
-- The script writes to `workspace/data_raw/`.
+- The script writes to `workspace/data/data_raw/`.
 - The script cannot produce required result artifacts.
 - Fixing the script would require inventing data, labels, parameters, or results.
 
@@ -394,7 +396,7 @@ code-reviewer
 Input state:
 
 - `implementation.target = matlab`
-- `workspace/scripts/matlab/q1_main.m` uses an absolute local path
+- `workspace/code/matlab/Q1/q1_main.m` uses an absolute local path
 - script displays ranking but does not save it
 
 Output:
@@ -405,12 +407,12 @@ Output:
     "implementation_target": "matlab",
     "status": "passed_with_warnings",
     "reviewed_scripts": [
-      "workspace/scripts/matlab/q1_main.m"
+      "workspace/code/matlab/Q1/q1_main.m"
     ],
     "fixed_issues": [
       {
         "type": "path_error",
-        "change": "Replaced absolute local input path with a relative path under workspace/data_clean/."
+        "change": "Replaced absolute local input path with a relative path under workspace/data/data_clean/."
       },
       {
         "type": "missing_result_artifact",
@@ -463,7 +465,7 @@ Output:
   "blocked_items": [
     "The script depends on a toolbox-specific solver that conflicts with the 北太天元 compatibility requirement."
   ],
-  "affected_script": "workspace/scripts/matlab/q3_main.m",
+  "affected_script": "workspace/code/matlab/Q3/q3_main.m",
   "recommended_next_skill": "method-selector",
   "recommended_next_action": "Revise the method plan to use a basic MATLAB-compatible solver or explicitly approve the dependency."
 }
@@ -484,7 +486,7 @@ Output:
   "blocked_items": [
     "Weight vector length does not match the number of indicators."
   ],
-  "affected_script": "workspace/scripts/matlab/q1_main.m",
+  "affected_script": "workspace/code/matlab/Q1/q1_main.m",
   "recommended_next_skill": "matlab-model-code-generator",
   "recommended_next_action": "Regenerate or repair the script using the indicator count from the cleaned data and method plan."
 }

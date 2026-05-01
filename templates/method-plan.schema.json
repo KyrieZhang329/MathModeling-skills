@@ -21,6 +21,9 @@
         "reason": {
           "$ref": "#/$defs/string_array"
         },
+        "selection_reason": {
+          "$ref": "#/$defs/string_array"
+        },
         "required_data": {
           "$ref": "#/$defs/string_array"
         },
@@ -29,6 +32,12 @@
         },
         "limitations": {
           "$ref": "#/$defs/string_array"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "risk": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -46,6 +55,37 @@
       "required": [
         "name",
         "reason"
+      ],
+      "additionalProperties": false
+    },
+    "candidate_scheme": {
+      "type": "object",
+      "properties": {
+        "scheme_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "core_methods": {
+          "$ref": "#/$defs/string_array"
+        },
+        "strengths": {
+          "$ref": "#/$defs/string_array"
+        },
+        "weaknesses": {
+          "$ref": "#/$defs/string_array"
+        },
+        "fit_reason": {
+          "type": "string"
+        },
+        "implementation_risk": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scheme_id",
+        "name"
       ],
       "additionalProperties": false
     }
@@ -108,6 +148,17 @@
           "problem_type": {
             "type": "string"
           },
+          "candidate_schemes": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/$defs/candidate_scheme"
+            }
+          },
+          "recommended_scheme_id": {
+            "type": "string"
+          },
           "required_output": {
             "$ref": "#/$defs/string_array"
           },
@@ -126,8 +177,14 @@
               "$ref": "#/$defs/rejected_method"
             }
           },
+          "expected_figures_tables": {
+            "$ref": "#/$defs/string_array"
+          },
           "expected_artifacts": {
             "$ref": "#/$defs/string_array"
+          },
+          "implementation_difficulty": {
+            "type": "string"
           },
           "validation_plan": {
             "$ref": "#/$defs/string_array"
@@ -139,6 +196,8 @@
         "required": [
           "id",
           "problem_type",
+          "candidate_schemes",
+          "recommended_scheme_id",
           "required_output",
           "baseline_model",
           "main_model",

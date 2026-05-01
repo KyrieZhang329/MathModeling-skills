@@ -17,9 +17,9 @@ This skill does not select models, implement the main model, run final experimen
 Use this skill:
 
 - After `method-selector` has produced a validated method plan.
-- When raw data files are available under `workspace/data_raw/`.
+- When raw data files are available under `workspace/data/data_raw/`.
 - When data fields, units, missing values, abnormal values, or encodings need to be audited.
-- Before `model-code-generator`.
+- Before `model-code-analyzer`.
 - Before writing paper claims based on data.
 - When the team needs a reproducible data cleaning record.
 
@@ -41,10 +41,10 @@ If raw data is unavailable but required, stop and report the missing data instea
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
-- `workspace/problem/problem_classification.json`, if available.
-- `workspace/problem/method_plan.json`, if available.
-- Raw data under `workspace/data_raw/`.
+- `workspace/problem/problem-parser/problem_parse.json`, if available.
+- `workspace/problem/problem-classifier/problem_classification.json`, if available.
+- `workspace/problem/method-selector/method_plan.json`, if available.
+- Raw data under `workspace/data/data_raw/`.
 - Data dictionaries, attachment descriptions, column descriptions, or unit notes.
 - User-provided explanation of fields if the dataset lacks metadata.
 - Contest rules about external data, if applicable.
@@ -52,7 +52,8 @@ Use or request:
 # Workflow
 
 1. Preserve raw data.
-   - Treat `workspace/data_raw/` as read-only.
+   - Tell the user to place raw data under `workspace/data/data_raw/` before cleaning begins.
+   - Treat `workspace/data/data_raw/` as read-only.
    - Do not overwrite, edit, or silently transform raw source files.
    - Record the original file names and formats.
 
@@ -83,10 +84,10 @@ Use or request:
    - Do not silently delete data.
 
 6. Produce cleaned data.
-   - Save cleaned data under `workspace/data_clean/`.
+   - Save cleaned data under `workspace/data/data_clean/`.
    - Keep file names traceable to the raw sources.
-   - Save reproducible cleaning logic under `workspace/scripts/` if code is generated.
-   - Save a data audit report under `workspace/results/`.
+   - Save reproducible cleaning logic under `workspace/code/scripts/` if code is generated.
+   - Save a data audit report under `workspace/data/data_report.md`.
 
 7. Generate exploratory summaries.
    - Provide descriptive statistics for key variables.
@@ -96,15 +97,15 @@ Use or request:
 8. Evaluate data readiness.
    - State whether the cleaned data can support the method plan.
    - Identify remaining data risks.
-   - Recommend whether to proceed to `model-code-generator` or return to `method-selector`.
+   - Recommend whether to proceed to `model-code-analyzer` or return to `method-selector`.
 
 # Outputs
 
 Produce data preparation artifacts such as:
 
-- `workspace/results/data_report.md`
-- `workspace/data_clean/clean_data.csv` or equivalent cleaned files
-- `workspace/scripts/data_cleaning.py` or `workspace/scripts/data_cleaning.m`, if code is needed
+- `workspace/data/data_report.md`
+- `workspace/data/data_clean/clean_data.csv` or equivalent cleaned files
+- `workspace/code/scripts/data_cleaning.py` or `workspace/code/scripts/data_cleaning.m`, if code is needed
 - `workspace/figures/eda_*.png` or equivalent EDA figures, if useful
 - field mapping between raw data and method requirements
 - list of unresolved data risks
@@ -119,7 +120,7 @@ Prefer this JSON-compatible report summary:
   "data_audit_summary": {
     "raw_files": [
       {
-        "path": "workspace/data_raw/example.csv",
+        "path": "workspace/data/data_raw/example.csv",
         "format": "csv",
         "rows": 100,
         "columns": 8,
@@ -154,15 +155,15 @@ Prefer this JSON-compatible report summary:
       "risk": "low"
     }
   ],
-  "generated_artifacts": [
-    "workspace/results/data_report.md",
-    "workspace/data_clean/clean_data.csv",
-    "workspace/scripts/data_cleaning.py"
-  ],
+    "generated_artifacts": [
+      "workspace/data/data_report.md",
+      "workspace/data/data_clean/clean_data.csv",
+      "workspace/code/scripts/data_cleaning.py"
+    ],
   "remaining_risks": [
     "Unit for daily_demand is not explicitly stated."
   ],
-  "recommended_next_skill": "model-code-generator"
+  "recommended_next_skill": "model-code-analyzer"
 }
 ```
 
@@ -259,11 +260,11 @@ Before handing off, verify:
 - Required fields from the method plan are mapped or marked missing.
 - Missing values, duplicates, outliers, units, and type issues are checked.
 - Cleaning actions are documented.
-- Cleaned data is saved under `workspace/data_clean/` or a save path is recommended.
-- Data report is saved under `workspace/results/` or a save path is recommended.
+- Cleaned data is saved under `workspace/data/data_clean/` or a save path is recommended.
+- Data report is saved under `workspace/data/` or a save path is recommended.
 - EDA figures, if generated, support modeling decisions.
 - Remaining data risks are listed.
-- The next skill is either `model-code-generator` or `method-selector`, depending on readiness.
+- The next skill is either `model-code-analyzer` or `method-selector`, depending on readiness.
 
 # Failure modes
 
@@ -301,7 +302,7 @@ When stopping, output:
 
 If data is ready or ready with documented warnings, hand off to:
 
-`model-code-generator`
+`model-code-analyzer`
 
 The handoff should include:
 
@@ -358,10 +359,10 @@ Output:
     }
   ],
   "generated_artifacts": [
-    "workspace/data_clean/clean_data.csv",
-    "workspace/results/data_report.md"
+    "workspace/data/data_clean/clean_data.csv",
+    "workspace/data/data_report.md"
   ],
-  "recommended_next_skill": "model-code-generator"
+  "recommended_next_skill": "model-code-analyzer"
 }
 ```
 
@@ -391,15 +392,15 @@ Output:
 
 Input state:
 
-- User asks to clean the original file directly inside `workspace/data_raw/`.
+- User asks to clean the original file directly inside `workspace/data/data_raw/`.
 
 Output:
 
 ```json
 {
   "blocked_items": [
-    "Raw data under workspace/data_raw/ must remain unchanged."
+    "Raw data under workspace/data/data_raw/ must remain unchanged."
   ],
-  "recommended_next_action": "Create cleaned copies under workspace/data_clean/ and keep a reproducible cleaning record."
+  "recommended_next_action": "Create cleaned copies under workspace/data/data_clean/ and keep a reproducible cleaning record."
 }
 ```

@@ -17,7 +17,7 @@ This skill does not select the final model, generate code, clean data, or write 
 Use this skill:
 
 - After `problem-parser` has produced a validated problem parse.
-- Before `method-selector`.
+- Before `related-paper-analyzer` and `method-selector`.
 - When subquestions need to be mapped to standard mathematical modeling types.
 - When a problem appears mixed and the team needs to separate evaluation, prediction, optimization, mechanism, classification, graph, simulation, or hybrid components.
 - When the team is tempted to choose a model before clarifying the task type.
@@ -41,7 +41,7 @@ If the problem parse is missing or incomplete, hand back to `problem-parser`.
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
+- `workspace/problem/problem-parser/problem_parse.json`, if available.
 - Parsed subquestions from `problem-parser`.
 - Goals, objects, constraints, data, and required outputs.
 - Preliminary variables, controllable quantities, observable quantities, and relationships.
@@ -85,11 +85,17 @@ Use or request:
 7. Produce a classification artifact.
    - Keep the output structured and concise.
    - Preserve ambiguity instead of forcing false certainty.
-   - Recommend `method-selector` as the next skill if classification is complete.
+   - Save the paired outputs under `workspace/problem/problem-classifier/`.
+   - Recommend `related-paper-analyzer` as the next skill if classification is complete.
 
 # Outputs
 
-Produce a problem classification artifact containing:
+Produce a problem classification artifact as paired outputs:
+
+- `workspace/problem/problem-classifier/problem_classification.json`
+- `workspace/problem/problem-classifier/problem_classification.md`
+
+The artifacts should contain:
 
 - `classification_summary`
 - `subquestion_classifications`
@@ -102,7 +108,7 @@ Produce a problem classification artifact containing:
 
 # Output format
 
-Prefer this JSON-compatible structure:
+Prefer this JSON-compatible structure for `workspace/problem/problem-classifier/problem_classification.json`:
 
 ```json
 {
@@ -160,11 +166,11 @@ Prefer this JSON-compatible structure:
   "ambiguities": [
     "Ambiguity inherited from the problem parse, if any."
   ],
-  "recommended_next_skill": "method-selector"
+  "recommended_next_skill": "related-paper-analyzer"
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+Also produce `workspace/problem/problem-classifier/problem_classification.md` with the same fields in readable Markdown form.
 
 # Standard problem types
 
@@ -510,7 +516,7 @@ Candidate method families:
 - Do not recommend complex or black-box methods without data and interpretability support.
 - Do not hide classification uncertainty.
 - Do not override ambiguities inherited from `problem-parser`.
-- Do not move directly to `model-code-generator`.
+- Do not move directly to `model-code-analyzer`.
 
 # Verification
 
@@ -522,7 +528,7 @@ Before handing off, verify:
 - Candidate method families are broad, not final model choices.
 - Unsuitable directions and classification risks are listed.
 - Hybrid structure and dependencies are identified if present.
-- The next skill is `method-selector`.
+- The next skill is `related-paper-analyzer`.
 
 # Failure modes
 
@@ -555,7 +561,7 @@ When stopping, output:
 
 After producing a validated classification artifact, hand off to:
 
-`method-selector`
+`related-paper-analyzer`
 
 The handoff should include:
 
@@ -568,7 +574,7 @@ The handoff should include:
 - risk flags
 - dependency pattern
 
-Do not hand off to `model-code-generator` directly.
+Do not hand off to `method-selector` directly unless literature analysis has already been completed or intentionally skipped.
 
 # Examples
 
@@ -632,7 +638,7 @@ Output:
       ]
     }
   ],
-  "recommended_next_skill": "method-selector"
+  "recommended_next_skill": "related-paper-analyzer"
 }
 ```
 
@@ -670,7 +676,7 @@ Output:
       "classification_reason": "Q3 asks for a pricing decision."
     }
   ],
-  "recommended_next_skill": "method-selector"
+  "recommended_next_skill": "related-paper-analyzer"
 }
 ```
 

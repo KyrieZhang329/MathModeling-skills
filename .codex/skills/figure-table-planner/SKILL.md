@@ -35,17 +35,16 @@ The following should already exist or be provided:
 - Existing figure files if already generated.
 - Expected paper structure or subquestion order if available.
 
-If model results do not exist, hand back to `code-reviewer`, `model-code-generator`, or `robustness-checker`.
-
+If model results do not exist, hand back to `code-reviewer`, `python-model-code-generator`, `matlab-model-code-generator`, or `robustness-checker`.
 If robustness evidence is required but missing, hand back to `robustness-checker`.
 
 # Inputs
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
-- `workspace/problem/method_plan.json`, if available.
-- `workspace/results/data_report.md`, if available.
+- `workspace/problem/problem-parser/problem_parse.json`, if available.
+- `workspace/problem/method-selector/method_plan.json`, if available.
+- `workspace/data/data_report.md`, if available.
 - Model result files under `workspace/results/`.
 - Robustness report and sensitivity tables under `workspace/results/`.
 - Existing figures under `workspace/figures/`.
@@ -97,6 +96,7 @@ Use or request:
 
 Produce a figure and table plan containing:
 
+- `workspace/figures/figure_table_plan.md`
 - `figure_table_summary`
 - `planned_figures`
 - `planned_tables`
@@ -109,7 +109,7 @@ Produce a figure and table plan containing:
 
 # Output format
 
-Prefer this JSON-compatible structure:
+Prefer this JSON-compatible structure for the planning summary, and also save a Markdown companion at `workspace/figures/figure_table_plan.md`:
 
 ```json
 {
@@ -126,8 +126,8 @@ Prefer this JSON-compatible structure:
       "subquestion": "all",
       "paper_section": "Problem analysis or model overview",
       "source_artifacts": [
-        "workspace/problem/problem_parse.json",
-        "workspace/problem/method_plan.json"
+        "workspace/problem/problem-parser/problem_parse.json",
+        "workspace/problem/method-selector/method_plan.json"
       ],
       "supports_claim": "The solution follows a staged workflow from data processing to model validation.",
       "status": "planned",
@@ -142,7 +142,7 @@ Prefer this JSON-compatible structure:
       "subquestion": "all",
       "paper_section": "Symbols and assumptions",
       "source_artifacts": [
-        "workspace/problem/method_plan.json"
+        "workspace/problem/method-selector/method_plan.json"
       ],
       "supports_claim": "Variables and parameters are consistently defined before modeling.",
       "status": "planned",
@@ -404,7 +404,7 @@ If missing visuals require additional robustness results, hand back to:
 
 If missing visuals require model outputs, hand back to:
 
-`code-reviewer` or `model-code-generator`
+`code-reviewer` or a language-specific model-code-generator
 
 Do not hand off directly to `quality-assurance-auditor` unless paper sections already exist.
 
@@ -430,7 +430,7 @@ Output:
       "subquestion": "Q1",
       "paper_section": "Q1 model construction",
       "source_artifacts": [
-        "workspace/problem/method_plan.json"
+        "workspace/problem/method-selector/method_plan.json"
       ],
       "supports_claim": "The evaluation process follows indicator normalization, weighting, scoring, and ranking.",
       "status": "planned"

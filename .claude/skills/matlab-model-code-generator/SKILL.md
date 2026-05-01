@@ -16,7 +16,7 @@ This skill does not choose the model, clean raw data, review code, run final QA,
 
 Use this skill:
 
-- After `model-code-generator` routes to `matlab-model-code-generator`.
+- After `model-code-analyzer` hands off to `matlab-model-code-generator`.
 - When `implementation.target = matlab`.
 - When the contest requires MATLAB / 北太天元 compatible scripts.
 - When the method plan and cleaned data are ready.
@@ -31,7 +31,7 @@ The following should already exist or be provided:
 - A validated method plan.
 - `implementation.target = matlab`.
 - Runtime notes if MATLAB / 北太天元 compatibility is required.
-- Cleaned data under `workspace/data_clean/`, unless the model does not need tabular data.
+- Cleaned data under `workspace/data/data_clean/`, unless the model does not need tabular data.
 - Data audit report and field mapping if data is used.
 - Expected result files and figure files from the method plan.
 
@@ -39,15 +39,16 @@ If the method plan is missing, hand back to `method-selector`.
 
 If cleaned data is required but missing, hand back to `data-auditor-cleaner`.
 
-If `implementation.target` is not `matlab`, hand back to `model-code-generator`.
+If `implementation.target` is not `matlab`, hand back to `model-code-analyzer`.
 
 # Inputs
 
 Use or request:
 
-- `workspace/problem/method_plan.json`
-- `workspace/results/data_report.md`, if available
-- cleaned data under `workspace/data_clean/`
+- `workspace/problem/method-selector/method_plan.json`
+- `workspace/code/model-code-analyzer.md`, if available
+- `workspace/data/data_report.md`, if available
+- cleaned data under `workspace/data/data_clean/`
 - field mapping from the data audit stage
 - required model inputs
 - expected result outputs
@@ -74,13 +75,14 @@ Use or request:
    - If 北太天元 compatibility is required, use conservative MATLAB-compatible syntax.
 
 3. Check data readiness.
-   - Use cleaned data from `workspace/data_clean/`.
-   - Do not read from `workspace/data_raw/` unless only inspecting metadata is explicitly requested.
+   - Use cleaned data from `workspace/data/data_clean/`.
+   - Do not read from `workspace/data/data_raw/` unless only inspecting metadata is explicitly requested.
    - Do not overwrite raw data.
    - Confirm required fields match the data audit report.
 
 4. Plan script structure.
-   - Save MATLAB scripts under `workspace/scripts/matlab/`.
+   - Save MATLAB code under `workspace/code/matlab/`.
+   - Use one folder per subquestion such as `workspace/code/matlab/Q1/` or `workspace/code/matlab/Q2/`.
    - Prefer plain `.m` scripts over Live Scripts.
    - Prefer simple script files for contest usability.
    - Use functions only when they make the code clearer; if using functions, ensure function names match file names.
@@ -122,10 +124,11 @@ Use or request:
 
 Produce MATLAB implementation artifacts such as:
 
-- `workspace/scripts/matlab/q1_baseline.m`
-- `workspace/scripts/matlab/q1_main.m`
-- `workspace/scripts/matlab/q1_improved.m`
-- `workspace/scripts/matlab/run_all.m`
+- `workspace/code/matlab/Q1/q1_baseline.m`
+- `workspace/code/matlab/Q1/q1_main.m`
+- `workspace/code/matlab/Q1/q1_improved.m`
+- `workspace/code/matlab/run_all.m`
+- `workspace/code/matlab/code_generation_summary.md`
 - `workspace/results/q1_baseline_results.csv`
 - `workspace/results/q1_main_results.csv`
 - `workspace/results/q1_model_summary.mat`
@@ -148,11 +151,11 @@ Prefer this JSON-compatible summary:
       "avoid-heavy-toolboxes"
     ],
     "generated_scripts": [
-      "workspace/scripts/matlab/q1_baseline.m",
-      "workspace/scripts/matlab/q1_main.m"
+      "workspace/code/matlab/Q1/q1_baseline.m",
+      "workspace/code/matlab/Q1/q1_main.m"
     ],
     "data_inputs": [
-      "workspace/data_clean/clean_data.csv"
+      "workspace/data/data_clean/clean_data.csv"
     ],
     "result_outputs": [
       "workspace/results/q1_baseline_results.csv",
@@ -162,9 +165,10 @@ Prefer this JSON-compatible summary:
       "workspace/figures/q1_ranking.png"
     ],
     "run_instructions": [
-      "Run workspace/scripts/matlab/q1_baseline.m",
-      "Run workspace/scripts/matlab/q1_main.m"
+      "Run workspace/code/matlab/Q1/q1_baseline.m",
+      "Run workspace/code/matlab/Q1/q1_main.m"
     ],
+    "markdown_summary": "workspace/code/matlab/code_generation_summary.md",
     "known_risks": [
       "Compatibility with 北太天元 should be checked if toolbox-specific functions are introduced."
     ],
@@ -225,8 +229,8 @@ Use relative paths where practical.
 Recommended paths:
 
 ```text
-workspace/data_clean/
-workspace/scripts/matlab/
+workspace/data/data_clean/
+workspace/code/matlab/
 workspace/results/
 workspace/figures/
 ```
@@ -261,9 +265,9 @@ end
 
 # Artifact rules
 
-- Read cleaned data from `workspace/data_clean/`.
-- Do not modify files under `workspace/data_raw/`.
-- Save MATLAB scripts under `workspace/scripts/matlab/`.
+- Read cleaned data from `workspace/data/data_clean/`.
+- Do not modify files under `workspace/data/data_raw/`.
+- Save MATLAB scripts under `workspace/code/matlab/`.
 - Save numeric outputs under `workspace/results/`.
 - Save figures under `workspace/figures/`.
 - Use clear file names such as:
@@ -326,7 +330,7 @@ Before handoff, verify:
 - `implementation.target = matlab`.
 - Every generated script maps to a subquestion and method-plan item.
 - Baseline code exists for every main model unless explicitly impossible.
-- Scripts are saved under `workspace/scripts/matlab/`.
+- Scripts are saved under `workspace/code/matlab/`.
 - Cleaned data paths are used.
 - No raw data file is overwritten.
 - Random seeds are fixed where needed.
@@ -418,11 +422,11 @@ Output:
   "matlab_code_generation_summary": {
     "implementation_target": "matlab",
     "generated_scripts": [
-      "workspace/scripts/matlab/q1_baseline.m",
-      "workspace/scripts/matlab/q1_entropy_topsis.m"
+      "workspace/code/matlab/Q1/q1_baseline.m",
+      "workspace/code/matlab/Q1/q1_entropy_topsis.m"
     ],
     "data_inputs": [
-      "workspace/data_clean/indicator_data.csv"
+      "workspace/data/data_clean/indicator_data.csv"
     ],
     "result_outputs": [
       "workspace/results/q1_equal_weight_results.csv",
@@ -432,8 +436,8 @@ Output:
       "workspace/figures/q1_ranking_comparison.png"
     ],
     "run_instructions": [
-      "Run workspace/scripts/matlab/q1_baseline.m",
-      "Run workspace/scripts/matlab/q1_entropy_topsis.m"
+      "Run workspace/code/matlab/Q1/q1_baseline.m",
+      "Run workspace/code/matlab/Q1/q1_entropy_topsis.m"
     ],
     "known_risks": [
       "Indicator direction must match the method plan before interpretation."
@@ -478,8 +482,8 @@ Output:
   "blocked_items": [
     "matlab-model-code-generator was invoked, but implementation.target is python."
   ],
-  "recommended_next_skill": "model-code-generator",
-  "recommended_next_action": "Route the method plan through model-code-generator."
+  "recommended_next_skill": "model-code-analyzer",
+  "recommended_next_action": "Route the method plan through model-code-analyzer."
 }
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: method-selector
-description: Select baseline, main, and improved models for each subproblem based on task type, data, interpretability, and contest constraints.
+description: Compare 2-4 candidate modeling schemes for each subproblem and recommend one execution route based on task type, data, interpretability, literature analysis, and contest constraints.
 license: MIT
 ---
 
@@ -8,7 +8,7 @@ license: MIT
 
 Select feasible modeling routes for each classified subquestion in a mathematical modeling contest.
 
-This skill converts a validated problem parse and problem classification into a method plan. For each subquestion, it proposes a baseline model, a main model, and, when justified, an improved model. It explains why each model fits the task, what data it requires, what outputs it should produce, and what risks must be checked later.
+This skill converts a validated problem parse, problem classification, and related-paper analysis into a method plan. For each subquestion, it should usually compare 2-4 candidate modeling schemes before recommending one execution route. Within the recommended route, it may still define a baseline model, a main model, and, when justified, an improved model.
 
 This skill does not generate code, clean data, run experiments, create figures, or write paper sections.
 
@@ -16,9 +16,9 @@ This skill does not generate code, clean data, run experiments, create figures, 
 
 Use this skill:
 
-- After `problem-parser` and `problem-classifier` have produced validated artifacts.
+- After `problem-parser`, `problem-classifier`, and `related-paper-analyzer` have produced validated artifacts.
 - Before data cleaning, code generation, robustness checks, figure planning, or paper writing.
-- When the team needs an executable modeling route for each subquestion.
+- When the team needs several contest-feasible modeling routes for each subquestion before committing to one execution plan.
 - When multiple plausible methods exist and the team needs a contest-feasible choice.
 - When a model choice must be justified against task type, data availability, interpretability, and time constraints.
 
@@ -28,6 +28,7 @@ The following should already exist or be provided:
 
 - A validated problem parse.
 - A validated problem classification artifact.
+- A related paper analysis artifact at `workspace/papers/related_paper_analysis.md` or an explicit decision to proceed without one.
 - Subquestion IDs and dependencies.
 - Required outputs for each subquestion.
 - Data inventory and known data limitations.
@@ -39,10 +40,12 @@ If the problem parse or classification is missing, hand back to `workflow-orches
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
-- `workspace/problem/problem_classification.json`, if available.
+- `workspace/problem/problem-parser/problem_parse.json`, if available.
+- `workspace/problem/problem-classifier/problem_classification.json`, if available.
+- `workspace/papers/related_paper_analysis.md`, if available.
 - Parsed subquestions, required outputs, constraints, and dependencies.
 - Primary and secondary problem types from `problem-classifier`.
+- Transferable ideas, cautions, and comparison notes from `workspace/papers/related_paper_analysis.md`.
 - Data inventory, missing data list, units, and known data risks.
 - User constraints, such as preferred implementation language, team skill level, contest deadline, or required interpretability.
 - Any known baseline requirements or scoring criteria.
@@ -62,20 +65,20 @@ Use or request:
    - Implementation risk.
    - Validation or evaluation requirement.
 
-3. Select a baseline model.
-   - Choose the simplest meaningful model that can produce a valid output.
-   - Use the baseline as a comparison point, not as filler.
-   - Keep the baseline easy to implement and explain.
+3. Generate candidate schemes.
+   - Propose 2-4 candidate modeling schemes for each subquestion when feasible.
+   - Keep schemes meaningfully different rather than cosmetic variants of the same idea.
+   - Use task type, data conditions, contest limits, and literature cues to justify why each scheme is worth considering.
 
-4. Select a main model.
-   - Match the main model to the classified task type and available data.
-   - Prefer methods that are contest-feasible, explainable, and verifiable.
-   - Explain why the main model improves on the baseline.
+4. Compare and recommend one execution route.
+   - Compare candidate schemes on feasibility, interpretability, implementation risk, data fit, and validation burden.
+   - Recommend one scheme for execution.
+   - Preserve the other schemes as explicit alternatives instead of collapsing them into a single hidden choice.
 
-5. Select an improved model only if justified.
-   - Use an improved model when it addresses a real weakness of the main model.
-   - Do not add an improved model only to make the paper look advanced.
-   - Clearly mark optional or high-risk improvements.
+5. Define baseline, main model, and improved model inside the recommended route.
+   - Choose the baseline as the simplest meaningful reference inside the recommended route.
+   - Choose the main model as the preferred executable method for the contest.
+   - Choose an improved model only if it addresses a specific weakness and remains contest-feasible.
 
 6. Reject unsuitable methods.
    - Explain why common tempting methods are not recommended.
@@ -87,19 +90,31 @@ Use or request:
    - Expected result tables.
    - Expected figures.
    - Required robustness or sensitivity checks.
-   - Handoff requirements for `data-auditor-cleaner` and `model-code-generator`.
+   - Handoff requirements for `data-auditor-cleaner` and `model-code-analyzer`.
 
 8. Produce a method plan.
    - Keep it structured.
    - Make every method traceable to a subquestion.
+   - Save the overall JSON plan under `workspace/problem/method-selector/`.
+   - Write one Markdown comparison document per subquestion under `workspace/problem/method-selector/`, such as `Q1.md`, `Q2.md`, or `Q3.md`.
+   - Each subquestion Markdown document should compare 2-4 candidate schemes and identify the recommended route for that subquestion.
    - Do not start implementation inside this skill.
 
 # Outputs
 
-Produce a method plan containing:
+Produce a method plan as paired problem-stage artifacts:
+
+- `workspace/problem/method-selector/method_plan.json`
+- `workspace/problem/method-selector/Q1.md`
+- `workspace/problem/method-selector/Q2.md`
+- additional per-subquestion Markdown files such as `Q3.md` or `Q4.md` when needed
+
+The artifacts should contain:
 
 - `method_plan_summary`
 - `subproblem_methods`
+- `candidate_schemes`
+- `recommended_scheme_id`
 - `dependency_plan`
 - `data_requirements`
 - `expected_artifacts`
@@ -111,7 +126,7 @@ Produce a method plan containing:
 
 # Output format
 
-Prefer this JSON-compatible structure:
+Prefer this JSON-compatible structure for `workspace/problem/method-selector/method_plan.json`:
 
 ```json
 {
@@ -128,6 +143,39 @@ Prefer this JSON-compatible structure:
     {
       "id": "Q1",
       "problem_type": "evaluation",
+      "candidate_schemes": [
+        {
+          "scheme_id": "Q1-S1",
+          "name": "weighted scoring route",
+          "core_methods": [
+            "normalization",
+            "weighted scoring"
+          ],
+          "strengths": [
+            "simple",
+            "easy to explain"
+          ],
+          "weaknesses": [
+            "sensitive to weight design"
+          ]
+        },
+        {
+          "scheme_id": "Q1-S2",
+          "name": "TOPSIS route",
+          "core_methods": [
+            "entropy weighting",
+            "TOPSIS"
+          ],
+          "strengths": [
+            "fits multi-indicator ranking",
+            "clear score output"
+          ],
+          "weaknesses": [
+            "indicator direction and normalization must be handled carefully"
+          ]
+        }
+      ],
+      "recommended_scheme_id": "Q1-S2",
       "required_output": [
         "score",
         "ranking",
@@ -234,10 +282,22 @@ Prefer this JSON-compatible structure:
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+Also produce one Markdown document per subquestion under `workspace/problem/method-selector/`.
+
+Each Markdown document should summarize:
+
+- the subquestion goal
+- the 2-4 candidate schemes considered
+- strengths and weaknesses of each scheme
+- the recommended scheme for execution
+- baseline, main model, and optional improved model inside the recommended route
+- required data, expected artifacts, and validation notes
 
 # Model selection rules
 
+- Provide 2-4 candidate schemes for each subquestion when feasible.
+- Do not treat baseline, main model, and improved model as substitutes for multiple candidate schemes.
+- Recommend one execution route, but preserve the alternatives explicitly.
 - Every main model must have a baseline.
 - Every model must map to a specific subquestion.
 - Every model must produce the required output form.
@@ -566,6 +626,8 @@ Avoid:
 
 Before handing off, verify:
 
+- Every subquestion has 2-4 candidate schemes or an explicit reason why fewer are defensible.
+- Every subquestion has one recommended execution route.
 - Every subquestion has a baseline model.
 - Every subquestion has a main model.
 - Improved models are justified or explicitly omitted.
@@ -613,6 +675,8 @@ After producing a validated method plan, hand off to:
 
 The handoff should include:
 
+- candidate schemes
+- recommended scheme for each subquestion
 - method plan
 - required data fields
 - expected cleaned data outputs
@@ -623,7 +687,7 @@ The handoff should include:
 - rejected methods and reasons
 - implementation notes
 
-If no external or tabular data is needed and the method plan is fully specified, the workflow owner may route next to `model-code-generator`, but only after confirming that data requirements are satisfied.
+If no external or tabular data is needed and the method plan is fully specified, the workflow owner may route next to `model-code-analyzer`, but only after confirming that data requirements are satisfied.
 
 # Examples
 
@@ -643,6 +707,17 @@ Output:
     {
       "id": "Q1",
       "problem_type": "evaluation",
+      "candidate_schemes": [
+        {
+          "scheme_id": "Q1-S1",
+          "name": "equal-weight scoring route"
+        },
+        {
+          "scheme_id": "Q1-S2",
+          "name": "entropy-weight TOPSIS route"
+        }
+      ],
+      "recommended_scheme_id": "Q1-S2",
       "baseline_model": {
         "name": "equal-weight normalized scoring",
         "role": "transparent baseline ranking"
@@ -687,6 +762,21 @@ Output:
     {
       "id": "Q2",
       "problem_type": "prediction",
+      "candidate_schemes": [
+        {
+          "scheme_id": "Q2-S1",
+          "name": "moving-average route"
+        },
+        {
+          "scheme_id": "Q2-S2",
+          "name": "ARIMA route"
+        },
+        {
+          "scheme_id": "Q2-S3",
+          "name": "feature-augmented regression route"
+        }
+      ],
+      "recommended_scheme_id": "Q2-S2",
       "baseline_model": {
         "name": "last-value or moving-average baseline",
         "role": "simple reference forecast"
@@ -736,6 +826,21 @@ Output:
     {
       "id": "Q3",
       "problem_type": "optimization",
+      "candidate_schemes": [
+        {
+          "scheme_id": "Q3-S1",
+          "name": "greedy allocation route"
+        },
+        {
+          "scheme_id": "Q3-S2",
+          "name": "integer linear programming route"
+        },
+        {
+          "scheme_id": "Q3-S3",
+          "name": "multi-objective optimization route"
+        }
+      ],
+      "recommended_scheme_id": "Q3-S2",
       "baseline_model": {
         "name": "greedy allocation by demand priority",
         "role": "simple feasible reference plan"

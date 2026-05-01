@@ -30,8 +30,8 @@ The following should already exist or be provided:
 
 - A validated method plan.
 - `implementation.target = python`.
-- Python scripts under `workspace/scripts/python/`.
-- Cleaned data under `workspace/data_clean/`, if data is required.
+- Python scripts under `workspace/code/python/`.
+- Cleaned data under `workspace/data/data_clean/`, if data is required.
 - Data audit report and field mapping if data is used.
 - Expected result paths under `workspace/results/`.
 - Expected figure paths under `workspace/figures/`.
@@ -48,10 +48,10 @@ If `implementation.target` is not `python`, hand back to `code-reviewer`.
 
 Use or request:
 
-- `workspace/problem/method_plan.json`
-- Python scripts under `workspace/scripts/python/`
-- cleaned data under `workspace/data_clean/`
-- `workspace/results/data_report.md`, if available
+- `workspace/problem/method-selector/method_plan.json`
+- Python scripts under `workspace/code/python/`
+- cleaned data under `workspace/data/data_clean/`
+- `workspace/data/data_report.md`, if available
 - field mapping from `data-auditor-cleaner`
 - expected output files
 - expected figure files
@@ -68,7 +68,7 @@ Use or request:
 1. Confirm Python review target.
    - Confirm `implementation.target = python`.
    - Confirm scripts are `.py` files.
-   - Confirm scripts are under `workspace/scripts/python/` or clearly documented otherwise.
+   - Confirm scripts are under `workspace/code/python/` or clearly documented otherwise.
    - Preserve dependency and portability runtime notes.
 
 2. Map scripts to the method plan.
@@ -87,8 +87,8 @@ Use or request:
    - Check that `run_all.py` exists only if useful.
 
 4. Check paths and artifacts.
-   - Confirm cleaned data is read from `workspace/data_clean/`.
-   - Confirm raw data under `workspace/data_raw/` is not modified.
+   - Confirm cleaned data is read from `workspace/data/data_clean/`.
+   - Confirm raw data under `workspace/data/data_raw/` is not modified.
    - Confirm results are saved under `workspace/results/`.
    - Confirm figures are saved under `workspace/figures/`.
    - Check that outputs are saved to portable formats such as `.csv`, `.json`, and `.png`.
@@ -151,7 +151,8 @@ Use or request:
 
 Produce reviewed Python code artifacts and a review summary such as:
 
-- corrected `.py` scripts under `workspace/scripts/python/`
+- corrected `.py` scripts under `workspace/code/python/`
+- `workspace/code/code-review/python_review_summary.md`
 - updated run instructions
 - fixed issue list
 - remaining dependency or portability risks
@@ -169,13 +170,13 @@ Prefer this JSON-compatible summary:
     "implementation_target": "python",
     "status": "passed_with_warnings",
     "reviewed_scripts": [
-      "workspace/scripts/python/q1_baseline.py",
-      "workspace/scripts/python/q1_main.py"
+      "workspace/code/python/Q1/q1_baseline.py",
+      "workspace/code/python/Q1/q1_main.py"
     ],
     "fixed_issues": [
       {
         "type": "path_error",
-        "file": "workspace/scripts/python/q1_main.py",
+        "file": "workspace/code/python/Q1/q1_main.py",
         "change": "Replaced an absolute input path with DATA_DIR / 'clean_data.csv'."
       }
     ],
@@ -183,14 +184,15 @@ Prefer this JSON-compatible summary:
       "Column names should be checked if the data audit report changes."
     ],
     "run_instructions": [
-      "python workspace/scripts/python/q1_baseline.py",
-      "python workspace/scripts/python/q1_main.py"
+      "python workspace/code/python/Q1/q1_baseline.py",
+      "python workspace/code/python/Q1/q1_main.py"
     ],
     "expected_outputs": [
       "workspace/results/q1_baseline_results.csv",
       "workspace/results/q1_main_results.csv",
       "workspace/figures/q1_ranking.png"
     ],
+    "markdown_summary": "workspace/code/code-review/python_review_summary.md",
     "recommended_next_skill": "robustness-checker"
   }
 }
@@ -344,7 +346,7 @@ Stop and report a blocker if:
 - Runtime errors cannot be fixed without changing the model.
 - The code depends on unavailable or unjustified heavy dependencies.
 - The script output cannot be linked to any subquestion.
-- The script writes to `workspace/data_raw/`.
+- The script writes to `workspace/data/data_raw/`.
 - The script cannot produce required result artifacts.
 - Fixing the script would require inventing data, labels, parameters, or results.
 - Contest rules disallow Python for the intended stage and no mixed-language workflow is approved.
@@ -421,7 +423,7 @@ code-reviewer
 Input state:
 
 - `implementation.target = python`
-- `workspace/scripts/python/q1_main.py` uses an absolute local path
+- `workspace/code/python/Q1/q1_main.py` uses an absolute local path
 - script displays ranking but does not save it
 
 Output:
@@ -432,7 +434,7 @@ Output:
     "implementation_target": "python",
     "status": "passed_with_warnings",
     "reviewed_scripts": [
-      "workspace/scripts/python/q1_main.py"
+      "workspace/code/python/Q1/q1_main.py"
     ],
     "fixed_issues": [
       {
@@ -489,7 +491,7 @@ Output:
   "blocked_items": [
     "Feature scaling is fitted on the full dataset before train-test split, causing leakage."
   ],
-  "affected_script": "workspace/scripts/python/q2_main.py",
+  "affected_script": "workspace/code/python/Q2/q2_main.py",
   "recommended_next_skill": "python-code-reviewer",
   "recommended_next_action": "Move scaler fitting after the train-test split and fit only on the training set."
 }
@@ -510,7 +512,7 @@ Output:
   "blocked_items": [
     "The script depends on an unjustified heavy package that is not required by the approved method plan."
   ],
-  "affected_script": "workspace/scripts/python/q3_main.py",
+  "affected_script": "workspace/code/python/Q3/q3_main.py",
   "recommended_next_skill": "python-code-reviewer",
   "recommended_next_action": "Replace the dependency with a simpler numpy / scipy / scikit-learn implementation or update the method plan with a justification."
 }

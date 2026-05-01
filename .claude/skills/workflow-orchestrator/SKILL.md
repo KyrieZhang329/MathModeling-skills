@@ -47,7 +47,7 @@ Inspect or request the following, depending on availability:
   - `workspace/figures/`
   - `workspace/paper_sections/`
   - `workspace/final_paper/`
-- Existing parsed problem, classification, method plan, data report, model results, robustness report, figure plan, paper sections, or QA report.
+- Existing parsed problem, classification, related paper analysis, method plan, data report, model results, robustness report, figure plan, paper sections, or QA report.
 - User constraints, such as contest deadline, allowed tools, preferred language, or team role distribution.
 
 # Workflow
@@ -60,6 +60,7 @@ Inspect or request the following, depending on availability:
    - problem intake
    - problem parsing
    - problem classification
+   - related paper analysis
    - method selection
    - data auditing and cleaning
    - model code generation
@@ -114,6 +115,7 @@ Prefer this JSON-compatible structure:
     "problem_statement": true,
     "problem_parse": false,
     "problem_classification": false,
+    "related_paper_analysis": false,
     "method_plan": false,
     "data_report": false,
     "cleaned_data": false,
@@ -208,15 +210,16 @@ Typical handoff order:
 
 1. `problem-parser`
 2. `problem-classifier`
-3. `method-selector`
-4. `data-auditor-cleaner`
-5. `model-code-generator`
-6. `code-reviewer`
-7. `robustness-checker`
-8. `figure-table-planner`
-9. `paper-section-writer`
-10. `quality-assurance-auditor`
-11. back to `workflow-orchestrator`
+3. `related-paper-analyzer`
+4. `method-selector`
+5. `data-auditor-cleaner`
+6. `model-code-generator`
+7. `code-reviewer`
+8. `robustness-checker`
+9. `figure-table-planner`
+10. `paper-section-writer`
+11. `quality-assurance-auditor`
+12. back to `workflow-orchestrator`
 
 If the workflow is complete and QA has passed, hand off to final assembly or user review.
 
@@ -261,8 +264,8 @@ Output:
   ],
   "next_skill": "problem-classifier",
   "next_actions": [
-    "Classify each subquestion before selecting methods.",
-    "Then hand off to method-selector."
+    "Classify each subquestion before literature analysis and method selection.",
+    "Then hand off to related-paper-analyzer."
   ]
 }
 ```

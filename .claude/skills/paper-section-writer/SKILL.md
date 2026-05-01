@@ -36,7 +36,7 @@ The following should already exist or be provided:
 - Existing figures and tables, or clearly marked planned figures and tables.
 - Contest formatting requirements if available.
 
-If model results do not exist, hand back to `code-reviewer` or `model-code-generator`.
+If model results do not exist, hand back to `code-reviewer`, `python-model-code-generator`, or `matlab-model-code-generator`.
 
 If the figure-table plan is missing, hand back to `figure-table-planner`.
 
@@ -46,10 +46,10 @@ If robustness evidence is required but missing, hand back to `robustness-checker
 
 Use or request:
 
-- `workspace/problem/problem_parse.json`, if available.
-- `workspace/problem/problem_classification.json`, if available.
-- `workspace/problem/method_plan.json`, if available.
-- `workspace/results/data_report.md`, if available.
+- `workspace/problem/problem-parser/problem_parse.json`, if available.
+- `workspace/problem/problem-classifier/problem_classification.json`, if available.
+- `workspace/problem/method-selector/method_plan.json`, if available.
+- `workspace/data/data_report.md`, if available.
 - Model result files under `workspace/results/`.
 - Robustness report and sensitivity tables under `workspace/results/`.
 - Figure-table plan.
@@ -148,7 +148,7 @@ Prefer this JSON-compatible summary:
       {
         "section": "model_q1.md",
         "uses_artifacts": [
-          "workspace/problem/method_plan.json",
+          "workspace/problem/method-selector/method_plan.json",
           "workspace/results/q1_main_results.csv",
           "workspace/figures/q1_ranking_comparison.png"
         ]
@@ -426,7 +426,7 @@ The handoff should include:
 
 If missing model results block writing, hand back to:
 
-`code-reviewer` or `model-code-generator`
+`code-reviewer` or a language-specific model-code-generator
 
 If missing robustness evidence blocks writing, hand back to:
 
@@ -461,7 +461,7 @@ Output:
       {
         "section": "model_q1.md",
         "uses_artifacts": [
-          "workspace/problem/method_plan.json",
+          "workspace/problem/method-selector/method_plan.json",
           "workspace/results/q1_main_results.csv",
           "workspace/figures/q1_ranking_comparison.png"
         ]

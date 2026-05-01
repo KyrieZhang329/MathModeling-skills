@@ -19,7 +19,7 @@
 
 ## 项目作用
 
-- 保持前半段建模流程统一，只在代码生成和代码审查处分支，总计 15 个 skill
+- 保持前半段建模流程统一，在方法选择前加入相关论文分析环节，并只在代码生成和代码审查处分支，总计 16 个 skill
 - 强制按固定流程：先读题，再分类，再选方法，再写代码，再检查，再写论文
 - 留档中间产物（解析后的题目、方法计划、数据报告、结果、图、论文草稿），任何一个数字都能回查到出处
 - Claude Code（`.claude/skills/`）和 Codex（`.codex/skills/`）共用同一套 skill
@@ -40,7 +40,8 @@
 | `workflow-orchestrator` | 跟踪当前进度，决定下一步用哪个 skill |
 | `problem-parser` | 读题，把题目拆成目标、对象、约束、数据、输出和子问题 |
 | `problem-classifier` | 给每个子问题打题型标签（评价类、预测类、优化类等） |
-| `method-selector` | 为每个子问题选 baseline、主模型、可选的改进模型 |
+| `related-paper-analyzer` | 在最终定方法前，收集并分析相关论文、报告和可借鉴的方法线索 |
+| `method-selector` | 为每个子问题提出 2–4 个候选建模方案，并推荐一个执行路线 |
 | `data-auditor-cleaner` | 审计数据，列出问题，输出清洗后的数据和一份数据报告 |
 | `model-code-generator` | 路由 skill：读取 `implementation.target`，再把任务交给对应语言的代码生成 skill |
 | `python-model-code-generator` | 当实现目标是 `python` 时生成 Python 建模代码 |
@@ -59,6 +60,7 @@
 workflow-orchestrator
 → problem-parser
 → problem-classifier
+→ related-paper-analyzer
 → method-selector
 → data-auditor-cleaner
 → model-code-generator (router)
@@ -81,6 +83,8 @@ workflow-orchestrator
 - 结果文件不存在，就不在论文里写对应数字
 - 没有 baseline 和敏感性分析，就不写"我们的模型更好"
 - QA 没过不组装最终论文
+
+在方法选择阶段，不应过早收缩成单一路线。`method-selector` 应该通常先比较每个子问题的 2–4 个候选方案，再给出推荐执行方案。
 
 如果比赛要求 MATLAB / 北太天元，就把 `implementation.target` 设为 `matlab`，并配合 `beita-tianyuan-compatible`、`avoid-heavy-toolboxes` 这类保守兼容说明。
 

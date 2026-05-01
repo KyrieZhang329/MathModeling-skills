@@ -36,7 +36,7 @@ The following should already exist or be provided:
 - Data audit report and code review report if available.
 - Known parameters, weights, thresholds, assumptions, constraints, and random seeds.
 
-If model outputs do not exist, hand back to `code-reviewer` or `model-code-generator`.
+If model outputs do not exist, hand back to `code-reviewer`, `python-model-code-generator`, or `matlab-model-code-generator`.
 
 If the main model has no baseline and no justified exception, hand back to `method-selector`.
 
@@ -45,8 +45,8 @@ If the main model has no baseline and no justified exception, hand back to `meth
 Use or request:
 
 - Method plan from `workspace/problem/` or equivalent.
-- Reviewed scripts under `workspace/scripts/`.
-- Cleaned data under `workspace/data_clean/`.
+- Reviewed scripts under `workspace/code/`.
+- Cleaned data under `workspace/data/data_clean/`.
 - Model outputs under `workspace/results/`.
 - Figures under `workspace/figures/`, if already generated.
 - Code review report.
@@ -498,7 +498,7 @@ Output:
     "Baseline output is missing, so the main optimization result cannot be compared against a reference plan."
   ],
   "affected_subquestion": "Q3",
-  "recommended_next_skill": "model-code-generator",
+  "recommended_next_skill": "python-model-code-generator or matlab-model-code-generator",
   "recommended_next_action": "Generate and review the planned baseline output before robustness comparison."
 }
 ```

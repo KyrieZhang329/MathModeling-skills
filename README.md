@@ -19,7 +19,7 @@ The real problems in mathematical modeling contests often do not come from “no
 
 ## What It Does
 
-- Keeps a unified modeling workflow and branches only at code generation and code review, for 15 total skills.
+- Keeps a unified modeling workflow, adds a related-paper analysis stage before method selection, and branches only at code generation and code review, for 16 total skills.
 - Encourages a fixed process: read the problem, classify the subquestions, select methods, write code, check results, then draft the paper.
 - Keeps intermediate outputs such as parsed problems, method plans, data reports, results, figures, and paper drafts, so that every important number can be traced back to its source.
 - Uses the same skill set for Claude Code (`.claude/skills/`) and Codex (`.codex/skills/`).
@@ -40,7 +40,8 @@ The real problems in mathematical modeling contests often do not come from “no
 | `workflow-orchestrator`     | Tracks the current stage and decides which skill should be used next. |
 | `problem-parser`            | Reads the problem and extracts goals, objects, constraints, data, outputs, and subquestions. |
 | `problem-classifier`        | Classifies each subquestion into a task type, such as evaluation, prediction, or optimization. |
-| `method-selector`           | Selects a baseline, a main model, and optional improved models for each subquestion. |
+| `related-paper-analyzer`    | Collects and analyzes relevant papers and reference methods before final method selection. |
+| `method-selector`           | Proposes 2-4 candidate modeling schemes for each subquestion and recommends one execution route. |
 | `data-auditor-cleaner`      | Audits the data, reports issues, and produces cleaned data with a data report. |
 | `model-code-generator`      | Router that reads `implementation.target` and hands off to the correct language-specific code generator. |
 | `python-model-code-generator` | Generates Python modeling code when the implementation target is `python`. |
@@ -59,6 +60,7 @@ The real problems in mathematical modeling contests often do not come from “no
 workflow-orchestrator
 → problem-parser
 → problem-classifier
+→ related-paper-analyzer
 → method-selector
 → data-auditor-cleaner
 → model-code-generator (router)
@@ -81,6 +83,8 @@ The order matters. The orchestrator is expected to keep several basic gates:
 - Do not write numerical claims in the paper before result files exist.
 - Do not claim “our model is better” without a baseline and sensitivity analysis.
 - Do not assemble the final paper before QA passes.
+
+Method selection should not collapse into a single route too early. For each subquestion, `method-selector` should usually compare 2-4 candidate schemes before recommending one execution plan.
 
 For contests requiring MATLAB / 北太天元, set `implementation.target` to `matlab` and use conservative runtime notes such as `beita-tianyuan-compatible` and `avoid-heavy-toolboxes`.
 

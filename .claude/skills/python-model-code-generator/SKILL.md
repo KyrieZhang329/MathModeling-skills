@@ -16,7 +16,7 @@ This skill does not choose the model, clean raw data, review code, run final QA,
 
 Use this skill:
 
-- After `model-code-generator` routes to `python-model-code-generator`.
+- After `model-code-analyzer` hands off to `python-model-code-generator`.
 - When `implementation.target = python`.
 - When Python is allowed by the contest or requested by the user.
 - When the method plan and cleaned data are ready.
@@ -31,7 +31,7 @@ The following should already exist or be provided:
 - A validated problem classification artifact.
 - A validated method plan.
 - `implementation.target = python`.
-- Cleaned data under `workspace/data_clean/`, unless the model does not need tabular data.
+- Cleaned data under `workspace/data/data_clean/`, unless the model does not need tabular data.
 - Data audit report and field mapping if data is used.
 - Expected result files and figure files from the method plan.
 - Runtime notes if specific dependency or portability constraints exist.
@@ -40,15 +40,16 @@ If the method plan is missing, hand back to `method-selector`.
 
 If cleaned data is required but missing, hand back to `data-auditor-cleaner`.
 
-If `implementation.target` is not `python`, hand back to `model-code-generator`.
+If `implementation.target` is not `python`, hand back to `model-code-analyzer`.
 
 # Inputs
 
 Use or request:
 
-- `workspace/problem/method_plan.json`
-- `workspace/results/data_report.md`, if available
-- cleaned data under `workspace/data_clean/`
+- `workspace/problem/method-selector/method_plan.json`
+- `workspace/code/model-code-analyzer.md`, if available
+- `workspace/data/data_report.md`, if available
+- cleaned data under `workspace/data/data_clean/`
 - field mapping from the data audit stage
 - required model inputs
 - expected result outputs
@@ -74,13 +75,14 @@ Use or request:
    - Use a minimal, common scientific Python stack.
 
 3. Check data readiness.
-   - Use cleaned data from `workspace/data_clean/`.
-   - Do not read from `workspace/data_raw/` unless only inspecting metadata is explicitly requested.
+   - Use cleaned data from `workspace/data/data_clean/`.
+   - Do not read from `workspace/data/data_raw/` unless only inspecting metadata is explicitly requested.
    - Do not overwrite raw data.
    - Confirm required fields match the data audit report.
 
 4. Plan script structure.
-   - Save Python scripts under `workspace/scripts/python/`.
+   - Save Python code under `workspace/code/python/`.
+   - Use one folder per subquestion such as `workspace/code/python/Q1/` or `workspace/code/python/Q2/`.
    - Prefer plain `.py` scripts over notebook-only workflows.
    - Keep scripts runnable from the project root.
    - Keep one script per subquestion when tasks are separable.
@@ -123,10 +125,11 @@ Use or request:
 
 Produce Python implementation artifacts such as:
 
-- `workspace/scripts/python/q1_baseline.py`
-- `workspace/scripts/python/q1_main.py`
-- `workspace/scripts/python/q1_improved.py`
-- `workspace/scripts/python/run_all.py`
+- `workspace/code/python/Q1/q1_baseline.py`
+- `workspace/code/python/Q1/q1_main.py`
+- `workspace/code/python/Q1/q1_improved.py`
+- `workspace/code/python/run_all.py`
+- `workspace/code/python/code_generation_summary.md`
 - `workspace/results/q1_baseline_results.csv`
 - `workspace/results/q1_main_results.csv`
 - `workspace/results/q1_model_summary.json`
@@ -149,11 +152,11 @@ Prefer this JSON-compatible summary:
       "portable-artifacts"
     ],
     "generated_scripts": [
-      "workspace/scripts/python/q1_baseline.py",
-      "workspace/scripts/python/q1_main.py"
+      "workspace/code/python/Q1/q1_baseline.py",
+      "workspace/code/python/Q1/q1_main.py"
     ],
     "data_inputs": [
-      "workspace/data_clean/clean_data.csv"
+      "workspace/data/data_clean/clean_data.csv"
     ],
     "result_outputs": [
       "workspace/results/q1_baseline_results.csv",
@@ -163,9 +166,10 @@ Prefer this JSON-compatible summary:
       "workspace/figures/q1_ranking.png"
     ],
     "run_instructions": [
-      "python workspace/scripts/python/q1_baseline.py",
-      "python workspace/scripts/python/q1_main.py"
+      "python workspace/code/python/Q1/q1_baseline.py",
+      "python workspace/code/python/Q1/q1_main.py"
     ],
+    "markdown_summary": "workspace/code/python/code_generation_summary.md",
     "dependencies": [
       "numpy",
       "pandas",
@@ -238,8 +242,8 @@ Use relative paths where practical.
 Recommended paths:
 
 ```text
-workspace/data_clean/
-workspace/scripts/python/
+workspace/data/data_clean/
+workspace/code/python/
 workspace/results/
 workspace/figures/
 ```
@@ -258,7 +262,7 @@ If path setup is needed, define paths near the top of the script:
 from pathlib import Path
 
 ROOT = Path(".")
-DATA_DIR = ROOT / "workspace" / "data_clean"
+DATA_DIR = ROOT / "workspace" / "data" / "data_clean"
 RESULT_DIR = ROOT / "workspace" / "results"
 FIGURE_DIR = ROOT / "workspace" / "figures"
 
@@ -268,9 +272,9 @@ FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Artifact rules
 
-- Read cleaned data from `workspace/data_clean/`.
-- Do not modify files under `workspace/data_raw/`.
-- Save Python scripts under `workspace/scripts/python/`.
+- Read cleaned data from `workspace/data/data_clean/`.
+- Do not modify files under `workspace/data/data_raw/`.
+- Save Python scripts under `workspace/code/python/`.
 - Save numeric outputs under `workspace/results/`.
 - Save figures under `workspace/figures/`.
 - Use clear file names such as:
@@ -372,7 +376,7 @@ Before handoff, verify:
 - `implementation.target = python`.
 - Every generated script maps to a subquestion and method-plan item.
 - Baseline code exists for every main model unless explicitly impossible.
-- Scripts are saved under `workspace/scripts/python/`.
+- Scripts are saved under `workspace/code/python/`.
 - Cleaned data paths are used.
 - No raw data file is overwritten.
 - Random seeds are fixed where needed.
@@ -464,11 +468,11 @@ Output:
   "python_code_generation_summary": {
     "implementation_target": "python",
     "generated_scripts": [
-      "workspace/scripts/python/q1_baseline.py",
-      "workspace/scripts/python/q1_entropy_topsis.py"
+      "workspace/code/python/Q1/q1_baseline.py",
+      "workspace/code/python/Q1/q1_entropy_topsis.py"
     ],
     "data_inputs": [
-      "workspace/data_clean/indicator_data.csv"
+      "workspace/data/data_clean/indicator_data.csv"
     ],
     "result_outputs": [
       "workspace/results/q1_equal_weight_results.csv",
@@ -478,8 +482,8 @@ Output:
       "workspace/figures/q1_ranking_comparison.png"
     ],
     "run_instructions": [
-      "python workspace/scripts/python/q1_baseline.py",
-      "python workspace/scripts/python/q1_entropy_topsis.py"
+      "python workspace/code/python/Q1/q1_baseline.py",
+      "python workspace/code/python/Q1/q1_entropy_topsis.py"
     ],
     "known_risks": [
       "Indicator direction must match the method plan before interpretation."
@@ -504,11 +508,11 @@ Output:
   "python_code_generation_summary": {
     "implementation_target": "python",
     "generated_scripts": [
-      "workspace/scripts/python/q2_baseline_moving_average.py",
-      "workspace/scripts/python/q2_random_forest.py"
+      "workspace/code/python/Q2/q2_baseline_moving_average.py",
+      "workspace/code/python/Q2/q2_random_forest.py"
     ],
     "data_inputs": [
-      "workspace/data_clean/train_data.csv"
+      "workspace/data/data_clean/train_data.csv"
     ],
     "result_outputs": [
       "workspace/results/q2_baseline_metrics.csv",
@@ -519,8 +523,8 @@ Output:
       "workspace/figures/q2_prediction_vs_actual.png"
     ],
     "run_instructions": [
-      "python workspace/scripts/python/q2_baseline_moving_average.py",
-      "python workspace/scripts/python/q2_random_forest.py"
+      "python workspace/code/python/Q2/q2_baseline_moving_average.py",
+      "python workspace/code/python/Q2/q2_random_forest.py"
     ],
     "known_risks": [
       "Train-test split must be checked for leakage during code review."
@@ -565,8 +569,8 @@ Output:
   "blocked_items": [
     "python-model-code-generator was invoked, but implementation.target is matlab."
   ],
-  "recommended_next_skill": "model-code-generator",
-  "recommended_next_action": "Route the method plan through model-code-generator."
+  "recommended_next_skill": "model-code-analyzer",
+  "recommended_next_action": "Route the method plan through model-code-analyzer."
 }
 ```
 

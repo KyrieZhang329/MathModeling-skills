@@ -18,6 +18,7 @@ Follow the standard workflow unless I explicitly override it:
 workflow-orchestrator
 → problem-parser
 → problem-classifier
+→ related-paper-analyzer
 → method-selector
 → data-auditor-cleaner
 → model-code-generator
@@ -83,13 +84,16 @@ When analyzing the problem, consider:
 3. Problem type
    Classify each subquestion separately. Do not force the whole problem into one type if the subquestions differ.
 
-4. Modeling route
-   For each subquestion, later choose a baseline model, a main model, and an optional improved model. Explain why each is feasible under the available data and contest time.
+4. Related papers
+   Collect and analyze relevant papers, reports, or reference solutions before final method selection. Extract transferable ideas, assumptions, data needs, and risks. Do not fabricate references or copy models blindly.
 
-5. Solution and validation
+5. Modeling route
+   For each subquestion, first compare 2-4 candidate modeling schemes. Then recommend one execution route. Baseline, main model, and optional improvement are not substitutes for multiple candidate schemes.
+
+6. Solution and validation
    Define what outputs, metrics, tables, and figures are needed. Compare against baselines and plan robustness or sensitivity checks.
 
-6. Limitations
+7. Limitations
    State what the model cannot support, what assumptions are strong, and what data limitations remain.
 
 When writing paper sections later:

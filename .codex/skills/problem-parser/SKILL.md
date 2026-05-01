@@ -80,11 +80,16 @@ Use or request the following:
 6. Produce a structured parse artifact.
    - Keep the artifact concise.
    - Preserve uncertainty instead of smoothing it over.
-   - Save or recommend saving the result under `workspace/problem/`.
+   - Save or recommend saving the paired outputs under `workspace/problem/problem-parser/`.
 
 # Outputs
 
-Produce a structured problem parse containing:
+Produce a structured problem parse as paired artifacts:
+
+- `workspace/problem/problem-parser/problem_parse.json`
+- `workspace/problem/problem-parser/problem_parse.md`
+
+The artifacts should contain:
 
 - `background`
 - `main_goal`
@@ -103,7 +108,7 @@ Produce a structured problem parse containing:
 
 # Output format
 
-Prefer this JSON-compatible structure:
+Prefer this JSON-compatible structure for `workspace/problem/problem-parser/problem_parse.json`:
 
 ```json
 {
@@ -191,7 +196,7 @@ Prefer this JSON-compatible structure:
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+Also produce `workspace/problem/problem-parser/problem_parse.md` with the same fields in readable Markdown form.
 
 # Rules
 

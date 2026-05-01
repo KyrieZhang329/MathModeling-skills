@@ -2,7 +2,7 @@
 
 [English](./modeling-workflow.md) | [简体中文](./modeling-workflow-zh.md)
 
-本文档说明 `MathModeling-skills` 中 11 个 skills 在数学建模竞赛中如何串联使用
+本文档说明 `MathModeling-skills` 中各个 skills 在数学建模竞赛中如何串联使用
 
 我们的目的不是把所有题目都套进同一种解法，而是减少比赛中常见的流程错误：题目没读清就建模，方法还没想清就写代码，结果没跑出来就写论文结论，或者论文中的数字无法追溯到任何结果文件
 
@@ -12,10 +12,15 @@
 workflow-orchestrator
 → problem-parser
 → problem-classifier
+→ related-paper-analyzer
 → method-selector
 → data-auditor-cleaner
-→ model-code-generator
-→ code-reviewer
+→ model-code-generator (router)
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
+→ code-reviewer (router)
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
 → robustness-checker
 → figure-table-planner
 → paper-section-writer
@@ -108,22 +113,54 @@ workflow-orchestrator
 - 所需输出不明确
 - 子问题表述过于模糊，无法分类
 
-**下一步：** `method-selector`
+**下一步：** `related-paper-analyzer`
 
-### **4. method-selector**
+### **4. related-paper-analyzer**
 
-**作用：** 为每个子问题选择可执行的建模路线。
+**作用：** 在最终方法选择之前，收集并分析相关论文、报告以及可迁移的方法思路。
 
 **输入：**
 
 - 题目解析
 - 题型分类
+- 比赛约束
+- 已知数据范围
+- 可访问的参考资料
+
+**输出：**
+
+- 文献分析摘要
+- 可借鉴的方法线索
+- 参考资料风险
+- 需要额外核验的假设
+- 供方法比较使用的说明
+
+**常见阻塞：**
+
+- 没有可访问的参考资料
+- 参考资料与当前题型不匹配
+- 来源质量不明确
+- 用户要求编造文献或盲目照搬论文
+
+**下一步：** `method-selector`
+
+### **5. method-selector**
+
+**作用：** 为每个子问题比较 2–4 个可执行建模方案，并推荐一个执行路线。
+
+**输入：**
+
+- 题目解析
+- 题型分类
+- 相关论文分析
 - 数据清单
 - 比赛约束
 - 队伍能力或时间限制
 
 **输出：**
 
+- 每个子问题的 2–4 个候选方案
+- 推荐执行方案
 - baseline 模型
 - 主模型
 - 可选改进模型
@@ -139,7 +176,7 @@ workflow-orchestrator
 
 **下一步：** 通常进入 `data-auditor-cleaner`
 
-### **5. data-auditor-cleaner**
+### **6. data-auditor-cleaner**
 
 **作用：** 检查并准备建模所需数据。
 
@@ -167,9 +204,9 @@ workflow-orchestrator
 
 **下一步：** 数据可用时进入 `model-code-generator`；数据无法支撑方法时返回 `method-selector`
 
-### **6. model-code-generator**
+### **7. model-code-generator**
 
-**作用：** 根据已验证的方法计划生成可执行代码。
+**作用：** 根据实现目标，把已验证的方法计划路由到正确的代码生成分支。
 
 **输入：**
 
@@ -177,9 +214,11 @@ workflow-orchestrator
 - 清洗后的数据
 - 预期输出
 - 验证需求
+- 实现目标
 
 **输出：**
 
+- 路由后的实现目标
 - 建模脚本
 - 结果输出路径
 - 图表输出路径
@@ -195,9 +234,9 @@ workflow-orchestrator
 
 **下一步：** `code-reviewer`
 
-### **7. code-reviewer**
+### **8. code-reviewer**
 
-**作用：** 在依赖代码结果之前，审查并修复建模代码。
+**作用：** 在依赖代码结果之前，将脚本族路由到对应语言的审查分支。
 
 **输入：**
 
@@ -206,6 +245,7 @@ workflow-orchestrator
 - 方法计划
 - 运行说明
 - 错误日志
+- 实现目标
 
 **输出：**
 
@@ -223,7 +263,7 @@ workflow-orchestrator
 
 **下一步：** `robustness-checker`
 
-### **8. robustness-checker**
+### **9. robustness-checker**
 
 **作用：** 检查结果是否足够稳定，能否支撑论文结论。
 
@@ -252,7 +292,7 @@ workflow-orchestrator
 
 **下一步：** `figure-table-planner`
 
-### **9. figure-table-planner**
+### **10. figure-table-planner**
 
 **作用：** 决定论文中需要哪些图表，以及每张图表服务什么论证。
 
@@ -281,7 +321,7 @@ workflow-orchestrator
 
 **下一步：** `paper-section-writer`
 
-### **10. paper-section-writer**
+### **11. paper-section-writer**
 
 **作用：** 基于已有中间产物起草论文分节。
 
@@ -310,7 +350,7 @@ workflow-orchestrator
 
 **下一步：** `quality-assurance-auditor`
 
-### **11. quality-assurance-auditor**
+### **12. quality-assurance-auditor**
 
 **作用：** 在最终组装或提交之前，对完整方案做最后审查。
 
