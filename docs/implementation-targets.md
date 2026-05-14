@@ -32,24 +32,34 @@ matlab
 
 The modeling logic does not depend on the programming language.
 
-These stages should remain language-neutral:
+These stages remain language-neutral:
 
 ```text
 problem-parser
 problem-classifier
+related-paper-analyzer
 method-selector
+symbol-table-builder
+model-assumptions-builder
 data-auditor-cleaner
+model-code-analyzer
+result-report-generator
 robustness-checker
+final-method-explainer
 figure-table-planner
+solution-package-builder
 paper-section-writer
+paper-polisher
+reference-manager
 quality-assurance-auditor
+workflow-orchestrator
 ```
 
 The language matters mainly in two places:
 
 ```text
-model-code-generator
-code-reviewer
+python-model-code-generator (or matlab-model-code-generator)
+code-reviewer → python-code-reviewer (or matlab-code-reviewer)
 ```
 
 Code generation needs language-specific syntax, dependencies, file formats, and runtime assumptions.
@@ -60,29 +70,26 @@ After code review, downstream skills should consume saved artifacts rather than 
 
 ## Workflow shape
 
-The intended workflow is:
+The intended code-related workflow is:
 
 ```text
-data-auditor-cleaner
-→ model-code-generator
-   ├── python-model-code-generator
-   └── matlab-model-code-generator
-→ code-reviewer
+model-code-analyzer
+→ python-model-code-generator (when target = python)
+   or matlab-model-code-generator (when target = matlab)
+→ code-reviewer (router)
    ├── python-code-reviewer
    └── matlab-code-reviewer
+→ result-report-generator
 → robustness-checker
-→ figure-table-planner
-→ paper-section-writer
-→ quality-assurance-auditor
 ```
 
-`model-code-generator` and `code-reviewer` are router skills.
-
-They should decide where to send the task. They should not contain detailed language-specific implementation logic.
+`model-code-analyzer` produces the language-neutral code thinking document.
+`python-model-code-generator` and `matlab-model-code-generator` implement it.
+`code-reviewer` routes to the correct language-specific reviewer.
 
 ## The `implementation` field
 
-A validated method plan should include an `implementation` object.
+A validated candidate method pool should include an `implementation` object.
 
 Recommended structure:
 
@@ -96,13 +103,8 @@ Recommended structure:
       "prefer-basic-matrix-and-table-operations"
     ],
     "script_style": "script",
-    "result_format": [
-      "csv",
-      "mat"
-    ],
-    "figure_format": [
-      "png"
-    ],
+    "result_format": ["csv", "mat"],
+    "figure_format": ["png", "svg"],
     "random_seed_required": true
   }
 }
@@ -110,23 +112,11 @@ Recommended structure:
 
 ### `target`
 
-Allowed values:
-
-```text
-python
-matlab
-```
-
-Use `python` when Python is the approved implementation language.
-
-Use `matlab` when the contest requires MATLAB, 北太天元, or MATLAB-compatible scripts.
+Allowed values: `python`, `matlab`.
 
 ### `runtime_notes`
 
-Use `runtime_notes` to record runtime constraints.
-
 Common Python notes:
-
 ```text
 minimal-dependencies
 portable-artifacts
@@ -136,7 +126,6 @@ fixed-random-seed
 ```
 
 Common MATLAB / 北太天元 notes:
-
 ```text
 beita-tianyuan-compatible
 avoid-heavy-toolboxes
@@ -146,183 +135,53 @@ avoid-app-designer
 save-portable-artifacts
 ```
 
-### `script_style`
+## Code and output paths
 
-Suggested values:
-
+Python code goes under:
 ```text
-script
-function
-mixed
+code/Qx/
 ```
 
-For mathematical modeling contests, `script` is usually the safest default.
-
-Use `function` only when the function structure makes the code easier to run and review.
-
-### `result_format`
-
-Recommended portable result formats:
-
+MATLAB code goes under:
 ```text
-csv
-json
-mat
-xlsx
+code/matlab/Qx/
 ```
 
-For MATLAB / 北太天元 workflows, prefer:
-
+All code must output to the language-neutral structure:
 ```text
-csv
-mat
-```
-
-For Python workflows, prefer:
-
-```text
-csv
-json
-```
-
-### `figure_format`
-
-Recommended figure formats:
-
-```text
-png
-pdf
-fig
-```
-
-Use `png` as the default because it is portable and easy to include in papers.
-
-### `random_seed_required`
-
-Use `true` when the method contains randomness, including:
-
-- Monte Carlo simulation
-- random initialization
-- random train-test split
-- stochastic optimization
-- machine learning models with random states
-
-## Routing rules
-
-### Route to Python
-
-Route to `python-model-code-generator` when:
-
-```json
-{
-  "implementation": {
-    "target": "python"
-  }
-}
-```
-
-Expected script directory:
-
-```text
-workspace/scripts/python/
-```
-
-Expected output directories:
-
-```text
-workspace/results/
-workspace/figures/
-```
-
-### Route to MATLAB / 北太天元
-
-Route to `matlab-model-code-generator` when:
-
-```json
-{
-  "implementation": {
-    "target": "matlab"
-  }
-}
-```
-
-Expected script directory:
-
-```text
-workspace/scripts/matlab/
-```
-
-Expected output directories:
-
-```text
-workspace/results/
-workspace/figures/
-```
-
-## Workspace convention
-
-Recommended workspace layout:
-
-```text
-workspace/
-├── problem/
-├── data_raw/
-├── data_clean/
-├── scripts/
-│   ├── python/
-│   └── matlab/
-├── results/
+results/Qx/experiments/roundN/
+├── tables/
 ├── figures/
-├── paper_sections/
-└── final_paper/
-```
-
-Language-specific code should stay under:
-
-```text
-workspace/scripts/python/
-workspace/scripts/matlab/
-```
-
-Results and figures should remain language-neutral:
-
-```text
-workspace/results/
-workspace/figures/
+├── metrics/
+├── logs/
+└── run_summary.json
 ```
 
 This allows downstream skills to work from artifacts instead of language-specific code.
 
 ## Artifact naming
 
-Use clear names that include:
-
-- subquestion id
-- model role
-- artifact type
-
-Examples:
+Use clear names that include method prefix:
 
 ```text
-workspace/scripts/matlab/q1_baseline.m
-workspace/scripts/matlab/q1_main.m
-workspace/scripts/python/q2_baseline.py
-workspace/scripts/python/q2_main.py
+# Python
+code/Q1/q1_m1_baseline.py
+code/Q1/q1_m2_main.py
 
-workspace/results/q1_baseline_results.csv
-workspace/results/q1_main_results.csv
-workspace/results/q2_prediction_metrics.csv
-workspace/results/q2_predictions.csv
+# MATLAB
+code/matlab/Q1/q1_m1_baseline.m
+code/matlab/Q1/q1_m2_main.m
 
-workspace/figures/q1_ranking_comparison.png
-workspace/figures/q2_prediction_vs_actual.png
+# Outputs
+results/Q1/experiments/round1/tables/m1_scores.csv
+results/Q1/experiments/round1/tables/m2_scores.csv
+results/Q1/experiments/round1/figures/m1_score_bar.png
+results/Q1/experiments/round1/run_summary.json
 ```
 
 Avoid vague names:
-
 ```text
 result.csv
-new_result.csv
 final.csv
 test.py
 main2.m
@@ -332,154 +191,27 @@ main2.m
 
 A mixed-language workflow is allowed only when it is explicit in the method plan.
 
-Example:
-
-```json
-{
-  "implementation": {
-    "target": "matlab",
-    "runtime_notes": [
-      "beita-tianyuan-compatible",
-      "python-used-for-preprocessing-only"
-    ]
-  }
-}
-```
-
 In this case:
-
-- Python preprocessing scripts should be saved under `workspace/scripts/python/`.
-- MATLAB official modeling scripts should be saved under `workspace/scripts/matlab/`.
-- The handoff from Python to MATLAB must be through portable data files under `workspace/data_clean/` or `workspace/results/`.
-- The final official computation source must be clear.
+- Python preprocessing scripts → `code/Qx/`
+- MATLAB official modeling scripts → `code/matlab/Qx/`
+- Handoff must be through portable data files under `workspace/data_clean/`
+- The final official computation source must be clear
 
 Do not create a mixed-language workflow accidentally.
 
-If the contest requires MATLAB / 北太天元 for official computation, Python should not become the hidden source of final results unless explicitly approved.
-
 ## Downstream merge
 
-After language-specific code review, the workflow merges back into:
-
+After code review, the workflow merges back into language-neutral skills that consume:
 ```text
-robustness-checker
+results/Qx/experiments/roundN/
+robustness/Qx/
 ```
-
-At that point, downstream skills should use:
-
-```text
-workspace/results/
-workspace/figures/
-```
-
-They should not depend on whether the result came from Python or MATLAB.
 
 Downstream claims should be based on saved result artifacts, not on console output.
 
-## Common failure cases
-
-### Missing implementation target
-
-Problem:
-
-```json
-{
-  "implementation": {}
-}
-```
-
-Action:
-
-Return to `method-selector` and add:
-
-```json
-{
-  "implementation": {
-    "target": "python"
-  }
-}
-```
-
-or:
-
-```json
-{
-  "implementation": {
-    "target": "matlab"
-  }
-}
-```
-
-### Contest requires MATLAB / 北太天元 but target is Python
-
-Problem:
-
-```json
-{
-  "implementation": {
-    "target": "python"
-  }
-}
-```
-
-when contest rules require MATLAB / 北太天元.
-
-Action:
-
-Return to `method-selector` and revise the target to:
-
-```json
-{
-  "implementation": {
-    "target": "matlab",
-    "runtime_notes": [
-      "beita-tianyuan-compatible"
-    ]
-  }
-}
-```
-
-### Script language conflicts with target
-
-Problem:
-
-```text
-implementation.target = matlab
-only .py scripts exist
-```
-
-Action:
-
-Return to `model-code-generator` and regenerate MATLAB scripts, or return to `method-selector` if Python was intended.
-
-### Results are saved only in language-specific binary formats
-
-Problem:
-
-```text
-only .pkl or only environment-specific files are saved
-```
-
-Action:
-
-Save portable artifacts such as:
-
-```text
-csv
-json
-mat
-png
-```
-
 ## Practical rule
 
-Select the implementation target in the method plan.
-
+Select the implementation target in the candidate method pool.
 Keep code language-specific.
-
 Keep results language-neutral.
-
-
-
-
-
+Always generate `run_summary.json`.

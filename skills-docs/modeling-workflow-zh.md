@@ -2,9 +2,9 @@
 
 [English](./modeling-workflow.md) | [简体中文](./modeling-workflow-zh.md)
 
-本文档说明 `MathModeling-skills` 中各个 skills 在数学建模竞赛中如何串联使用
+本文档说明 `MathModeling-skills` 中 24 个 skills 在数学建模竞赛中如何串联使用。
 
-我们的目的不是把所有题目都套进同一种解法，而是减少比赛中常见的流程错误：题目没读清就建模，方法还没想清就写代码，结果没跑出来就写论文结论，或者论文中的数字无法追溯到任何结果文件
+我们的目的不是把所有题目都套进同一种解法，而是减少比赛中常见的流程错误：题目没读清就建模，方法还没想清就写代码，结果没跑出来就写论文结论，或者论文中的数字无法追溯到任何结果文件。
 
 ## 工作流总览
 
@@ -14,454 +14,144 @@ workflow-orchestrator
 → problem-classifier
 → related-paper-analyzer
 → method-selector
+→ symbol-table-builder
+→ model-assumptions-builder
 → data-auditor-cleaner
-→ model-code-generator (router)
+→ model-code-analyzer
    ├── python-model-code-generator
    └── matlab-model-code-generator
-→ code-reviewer (router)
+→ code-reviewer
    ├── python-code-reviewer
    └── matlab-code-reviewer
+→ result-report-generator
 → robustness-checker
+→ final-method-explainer
 → figure-table-planner
+→ math-figure-generator
+→ solution-package-builder
 → paper-section-writer
+→ paper-polisher
+→ reference-manager
 → quality-assurance-auditor
 → workflow-orchestrator
 ```
 
-每个阶段都应该留下一个可检查的中间产物，供下一个阶段继续使用
-
-## **分阶段说明**
-
-### **1. workflow-orchestrator**
-
-**作用：** 检查当前项目状态，判断下一步应该使用哪个 skill
-
-**输入：**
-
-- 当前 workspace 目录结构
-- 已有中间产物
-- 用户提供的当前进度
-- 比赛截止时间或其他限制
-
-**输出：**
-
-- 当前阶段
-- 缺失的中间产物
-- 阻塞项
-- 下一个 skill
-- 下一步动作
-
-**常见阻塞：**
-
-- 没有题目文件
-- workspace 状态前后不一致
-- 用户希望跳过必要限制
-
-**下一步：** 通常进入 `problem-parser`
-
-### **2. problem-parser**
-
-**作用：** 阅读题目，并将题目转化为结构化任务描述。
-
-**输入：**
-
-- 赛题原文
-- 附件或数据说明
-- 与数据使用、提交格式有关的比赛规则
-
-**输出：**
-
-- 题目背景
-- 总目标
-- 研究对象
-- 子问题
-- 约束条件
-- 数据清单
-- 所需输出
-- 歧义点与风险点
-
-**常见阻塞：**
-
-- 题目不可读
-- 关键附件缺失
-- 子问题无法识别
-
-**下一步：** `problem-classifier`
-
-### **3. problem-classifier**
-
-**作用：** 判断每个子问题的核心题型。
-
-**输入：**
-
-- 已解析的子问题
-- 每问所需输出
-- 数据清单
-- 约束条件
-
-**输出：**
-
-- 每个子问题的主要题型
-- 必要时给出次要题型
-- 分类理由
-- 候选方法族
-- 分类风险
-
-**常见阻塞：**
-
-- 缺少题目解析
-- 所需输出不明确
-- 子问题表述过于模糊，无法分类
-
-**下一步：** `related-paper-analyzer`
-
-### **4. related-paper-analyzer**
-
-**作用：** 在最终方法选择之前，收集并分析相关论文、报告以及可迁移的方法思路。
-
-**输入：**
-
-- 题目解析
-- 题型分类
-- 比赛约束
-- 已知数据范围
-- 可访问的参考资料
-
-**输出：**
-
-- 文献分析摘要
-- 可借鉴的方法线索
-- 参考资料风险
-- 需要额外核验的假设
-- 供方法比较使用的说明
-
-**常见阻塞：**
-
-- 没有可访问的参考资料
-- 参考资料与当前题型不匹配
-- 来源质量不明确
-- 用户要求编造文献或盲目照搬论文
-
-**下一步：** `method-selector`
-
-### **5. method-selector**
-
-**作用：** 为每个子问题比较 2–4 个可执行建模方案，并推荐一个执行路线。
-
-**输入：**
-
-- 题目解析
-- 题型分类
-- 相关论文分析
-- 数据清单
-- 比赛约束
-- 队伍能力或时间限制
-
-**输出：**
-
-- 每个子问题的 2–4 个候选方案
-- 推荐执行方案
-- baseline 模型
-- 主模型
-- 可选改进模型
-- 被拒绝的方法及原因
-- 预期输入与输出
-- 验证与稳健性计划
-
-**常见阻塞：**
-
-- 数据无法支撑拟采用的方法
-- 所需输出不明确
-- 无法定义有意义的 baseline
-
-**下一步：** 通常进入 `data-auditor-cleaner`
-
-### **6. data-auditor-cleaner**
-
-**作用：** 检查并准备建模所需数据。
-
-**输入：**
-
-- 原始数据
-- 方法计划
-- 字段说明
-- 数据字典
-
-**输出：**
-
-- 数据审计报告
-- 清洗后的数据
-- 字段映射
-- 必要的清洗脚本
-- 尚未解决的数据风险
-
-**常见阻塞：**
-
-- 原始数据缺失
-- 文件无法读取
-- 必要字段缺失
-- 字段含义或单位不明确
-
-**下一步：** 数据可用时进入 `model-code-generator`；数据无法支撑方法时返回 `method-selector`
-
-### **7. model-code-generator**
-
-**作用：** 根据实现目标，把已验证的方法计划路由到正确的代码生成分支。
-
-**输入：**
-
-- 方法计划
-- 清洗后的数据
-- 预期输出
-- 验证需求
-- 实现目标
-
-**输出：**
-
-- 路由后的实现目标
-- 建模脚本
-- 结果输出路径
-- 图表输出路径
-- 运行说明
-- 实现说明
-
-**常见阻塞：**
-
-- 缺少已验证的方法计划
-- 缺少清洗后的数据
-- 必要字段不存在
-- 当前数据无法实现所选方法
-
-**下一步：** `code-reviewer`
-
-### **8. code-reviewer**
-
-**作用：** 在依赖代码结果之前，将脚本族路由到对应语言的审查分支。
-
-**输入：**
-
-- 建模脚本
-- 清洗后的数据
-- 方法计划
-- 运行说明
-- 错误日志
-- 实现目标
-
-**输出：**
-
-- 审查后或修复后的脚本
-- 修复问题列表
-- 剩余风险
-- 已验证的输出路径
-
-**常见阻塞：**
-
-- 脚本缺失
-- 运行错误需要改变模型本身才能修复
-- 代码与方法计划不一致
-- 输出无法对应到任何子问题
-
-**下一步：** `robustness-checker`
-
-### **9. robustness-checker**
-
-**作用：** 检查结果是否足够稳定，能否支撑论文结论。
-
-**输入：**
-
-- 已审查代码
-- baseline 结果
-- 主模型结果
-- 方法计划
-- 数据报告
-
-**输出：**
-
-- 稳健性报告
-- 敏感性分析表
-- 误差指标
-- baseline 对比
-- 稳定结论与脆弱结论
-
-**常见阻塞：**
-
-- baseline 缺失
-- 模型结果缺失
-- 要检验的指标或结论未定义
-- 检查需要编造数据才能完成
-
-**下一步：** `figure-table-planner`
-
-### **10. figure-table-planner**
-
-**作用：** 决定论文中需要哪些图表，以及每张图表服务什么论证。
-
-**输入：**
-
-- 模型结果
-- 稳健性结果
-- 方法计划
-- 已有图表
-- 预期论文结构
-
-**输出：**
-
-- 计划使用的图
-- 计划使用的表
-- 对应数据来源
-- 论文分节映射
-- 图表标题或说明要求
-- 图表风险
-
-**常见阻塞：**
-
-- 想画的图没有数据来源
-- 结果表缺失
-- 图表会夸大已有证据
-
-**下一步：** `paper-section-writer`
-
-### **11. paper-section-writer**
-
-**作用：** 基于已有中间产物起草论文分节。
-
-**输入：**
-
-- 题目解析
-- 方法计划
-- 数据报告
-- 模型结果
-- 稳健性报告
-- 图表计划
-
-**输出：**
-
-- 论文分节草稿
-- 章节与 artifact 的映射
-- 不受支持的结论列表
-- 尚未完成的章节
-
-**常见阻塞：**
-
-- 结果缺失
-- 图表计划缺失
-- 用户要求写的结论没有证据支撑
-- 结论超出了已有结果的范围
-
-**下一步：** `quality-assurance-auditor`
-
-### **12. quality-assurance-auditor**
-
-**作用：** 在最终组装或提交之前，对完整方案做最后审查。
-
-**输入：**
-
-- 所有论文分节
-- 题目解析
-- 方法计划
-- 数据报告
-- 脚本
-- 结果
-- 图表
-- 稳健性报告
-
-**输出：**
-
-- QA 状态
-- 阻塞问题
-- 次要问题
-- 修复计划
-- 是否允许最终组装
-
-**常见阻塞：**
-
-- 子问题没有回答
-- 数值结论没有结果文件支撑
-- 稳健性证据缺失
-- 论文引用了不存在的图表
-- 模型、代码和论文表述不一致
-
-**下一步：** 回到 `workflow-orchestrator`
-
-## **工作流限制**
+每个阶段都应该留下一个可检查的中间产物，供下一个阶段继续使用。
+
+## 分阶段说明
+
+### 0. 全局启动阶段（只跑一次）
+
+**workflow-orchestrator** → 检查当前项目状态，决定下一步。
+**problem-parser** → 读题并转化为结构化任务描述。
+**problem-classifier** → 判断每个子问题的核心题型。
+**related-paper-analyzer** → 分析用户提供的论文，提取可迁移方法。
+**symbol-table-builder** → 构建统一的全局符号表。
+**model-assumptions-builder** → 提取并组织全局模型假设。
+
+### 每小问迭代循环
+
+```
+method-selector → data-auditor-cleaner → model-code-analyzer
+  → 代码生成器 → code-reviewer → result-report-generator
+  → [建模手审阅实验报告 → 如需修改则回到 method-selector]
+  → [或继续锁定最终方法]
+→ robustness-checker → final-method-explainer
+  → figure-table-planner → math-figure-generator
+  → solution-package-builder → paper-section-writer
+  → paper-polisher → reference-manager
+```
+
+### 最终组装
+
+**quality-assurance-auditor** → 最终 QA 检查。
+**workflow-orchestrator** → QA通过后组装终稿。
+
+## 每小问交付链
+
+每个 Qx 完整链路：
+
+1. `method-selector` → `methods/Qx/qx_method_candidates.md`
+2. `data-auditor-cleaner` → 清洗数据 + 数据报告
+3. `model-code-analyzer` → `code/model-code-analyzer.md`
+4. `python/matlab-model-code-generator` → `code/Qx/*` 或 `code/matlab/Qx/*`
+5. `code-reviewer` → 审查后代码
+6. `result-report-generator` → `results/Qx/experiments/roundN/qx_experiment_report_roundN.md`
+7. [循环 1-6 直到方法收敛；建模手记录在 `methods/Qx/qx_method_iteration_log.md`]
+8. `robustness-checker` → `robustness/Qx/qx_robustness_report.md`
+9. `final-method-explainer` → `methods/Qx/qx_final_method_explanation.md`
+10. `result-report-generator`（最终模式）→ `results/Qx/reports/qx_final_result_analysis.md`
+11. `figure-table-planner` → `methods/Qx/qx_figure_table_plan.md`
+12. `math-figure-generator` → 论文图表
+13. `solution-package-builder` → `results/Qx/reports/qx_solution_package_for_writer.md`
+14. `paper-section-writer` → `paper/sections/qx.tex`
+15. `paper-polisher` → 润色后论文分节
+16. `reference-manager` → `paper/refs.bib` + 引用审计
+17. 建模手审阅 + 编程手审阅 → Finalized
+
+## 工作流限制
 
 以下限制是有意设置的：
 
 - 题目未解析前，不进入方法选择。
-- 方法计划未完成前，不生成代码。
+- 候选方法池不存在时，不生成代码。
 - 没有结果 artifact 前，不写论文结论。
+- Qx 没有 `qx_final_method_explanation.md` 时不准写最终论文（规则 1）。
+- Qx 没有 `qx_final_result_analysis.md` 时不准交给论文手（规则 2）。
+- Qx 没有 `qx_solution_package_for_writer.md` 时论文手不准开始（规则 3）。
 - 没有 baseline 和稳健性证据前，不声称模型更优。
 - QA 未通过前，不组装最终论文。
 - 原始数据必须保持不变。
 
-如果某个限制阻止继续推进，应明确报告阻塞原因，并回到能够解决该问题的上游 skill。
+## 三条关键规则
 
-## **回退说明**
+规则 1：没有最终方法详解，不准写最终论文。
+规则 2：没有最终结果分析，不准交给论文手。
+规则 3：论文手只看材料包，不从零散结果里猜。
 
-回退不是失败，而是正常流程的一部分。发现问题时，应回到最早能够修复它的阶段
+## Workspace 结构
 
-| **问题**                   | **回到**                |
-| -------------------------- | ----------------------- |
-| 题目理解错误               | `problem-parser`        |
-| 子问题题型判断错误         | `problem-classifier`    |
-| 数据无法支撑所选方法       | `method-selector`       |
-| 原始数据或清洗数据有问题   | `data-auditor-cleaner`  |
-| 代码运行失败或与方法不一致 | `code-reviewer`         |
-| 结论不稳定                 | `robustness-checker`    |
-| 图表没有证据来源           | `figure-table-planner`  |
-| 论文结论没有支撑           | `paper-section-writer`  |
-| 最终提交存在阻塞问题       | `workflow-orchestrator` |
-
-## **Artifact 目录映射**
-
-建议的 workspace 结构：
-
-```text
-workspace/
-├── problem/
-├── data_raw/
-├── data_clean/
-├── scripts/
-├── results/
-├── figures/
-├── paper_sections/
-└── final_paper/
+```
+project/
+├── planning/                   # 全局规划
+│   ├── parse/                  # 题目解析
+│   ├── classification/         # 题型分类
+│   ├── symbol_table.md         # 统一符号表
+│   ├── model_assumptions.md    # 全局模型假设
+│   ├── question_dependency.md  # 小问依赖
+│   └── progress_dashboard.md   # 进度看板
+├── methods/Qx/                 # 每小问方法产物
+├── code/Qx/                    # Python 代码
+├── code/matlab/Qx/             # MATLAB 代码
+├── results/Qx/
+│   ├── experiments/roundN/     # 实验输出
+│   └── reports/                # 分析报告
+├── robustness/Qx/              # 稳健性报告
+├── paper/                      # 论文材料
+└── workspace/                  # 数据和外部工作区
 ```
 
-常见内容如下：
+## 回退说明
 
-| **路径**                    | **内容**                               |
-| --------------------------- | -------------------------------------- |
-| `workspace/problem/`        | 赛题原文、题目解析、题型分类、方法计划 |
-| `workspace/data_raw/`       | 原始数据文件；应保持不变               |
-| `workspace/data_clean/`     | 清洗后的数据和派生特征                 |
-| `workspace/scripts/`        | 生成的 Python 或 MATLAB 脚本           |
-| `workspace/results/`        | 结果表、指标、报告、稳健性输出         |
-| `workspace/figures/`        | 已生成或计划用于论文的图               |
-| `workspace/paper_sections/` | 论文分节草稿                           |
-| `workspace/final_paper/`    | 组装后的最终论文和提交材料             |
+回退不是失败，而是正常流程的一部分。发现问题时，应回到最早能够修复它的阶段。
 
-## **最小运行示例**
+| 问题 | 回到 |
+|------|------|
+| 题目理解错误 | `problem-parser` |
+| 题型判断错误 | `problem-classifier` |
+| 方法数据不匹配 | `method-selector` |
+| 符号跨小问冲突 | `symbol-table-builder` |
+| 假设冲突 | `model-assumptions-builder` |
+| 数据问题 | `data-auditor-cleaner` |
+| 代码失败或与方法不一致 | `code-reviewer` |
+| 实验结果不好 | `method-selector`（修改方法）|
+| 结论不稳定 | `robustness-checker` |
+| 图表没有证据 | `figure-table-planner` |
+| 论文结论无支撑 | `paper-section-writer` |
+| 措辞问题 | `paper-polisher` |
+| 引用未验证 | `reference-manager` |
+| 提交有阻塞 | `quality-assurance-auditor` |
 
-一个新的比赛任务可以这样开始：
+## 说明
 
-```text
-使用 workflow-orchestrator。题目在 workspace/problem/problem.pdf，原始数据在 workspace/data_raw/。从 problem-parser 开始，不要跳过阶段。
-```
-
-典型流程如下：
-
-1. 解析题目
-2. 判断每个子问题的题型
-3. 选择 baseline、主模型和可选改进模型
-4. 审计并清洗数据
-5. 生成建模代码
-6. 审查代码和输出
-7. 做稳健性检查
-8. 规划图表
-9. 起草论文分节
-10. 做最终 QA
-
-## **说明**
-
-在有充分理由时，可以跳过或合并某些阶段，但这个选择应该被明确记录。如果一个结果、图表或结论无法追溯到任何 artifact，就应该把它视为未完成
+在有充分理由时，可以跳过或合并某些阶段，但这个选择应该被明确记录。如果一个结果、图表或结论无法追溯到任何 artifact，就应该把它视为未完成。

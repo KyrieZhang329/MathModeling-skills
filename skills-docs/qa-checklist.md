@@ -14,6 +14,19 @@ Use three possible QA states:
 
 If any required subquestion is unanswered, QA fails.
 
+## Workflow completeness (must pass for all Qx)
+
+For each subquestion, check:
+
+- [ ] Candidate method pool exists (`methods/Qx/qx_method_candidates.md`)
+- [ ] Experiment report(s) exist (`results/Qx/experiments/roundN/`)
+- [ ] Method iteration log exists (`methods/Qx/qx_method_iteration_log.md`)
+- [ ] Final method explanation exists (`methods/Qx/qx_final_method_explanation.md`)  ← Rule 1
+- [ ] Final result analysis exists (`results/Qx/reports/qx_final_result_analysis.md`)  ← Rule 2
+- [ ] Solution package exists (`results/Qx/reports/qx_solution_package_for_writer.md`)  ← Rule 3
+- [ ] Robustness report exists (`robustness/Qx/qx_robustness_report.md`) or justified exception
+- [ ] Figure-table plan exists (`methods/Qx/qx_figure_table_plan.md`)
+
 ## Problem coverage
 
 Check:
@@ -35,14 +48,15 @@ Blocking issues:
 Check:
 
 - task type matches the chosen method
-- method plan matches paper description
+- paper's method description matches the final method explanation (not early candidate pool)
 - baseline exists for every main model unless justified
 - improved model is clearly marked as optional if not essential
+- eliminated methods are mentioned appropriately
 - rejected methods are not later described as used
 
 Blocking issues:
 
-- paper describes a different method than the code implements
+- paper describes a different method than the final method explanation
 - main model has no baseline and no justification
 - method cannot produce the required output
 
@@ -68,10 +82,10 @@ Blocking issues:
 
 Check:
 
-- scripts exist for generated results
-- run instructions are available
-- output files are saved under `workspace/results/`
-- figures are saved under `workspace/figures/`
+- scripts exist under `code/Qx/` or `code/matlab/Qx/`
+- run instructions are available (README.md in code folder)
+- output files follow `experiments/roundN/` structure
+- `run_summary.json` exists for each round
 - paper numbers match result files
 - random seeds are fixed when needed
 
@@ -88,9 +102,10 @@ Check:
 
 - baseline result exists where needed
 - main model is compared with baseline
-- robustness or sensitivity checks exist
+- robustness or sensitivity checks exist per subquestion
 - fragile conclusions are marked
 - robustness claims do not exceed completed checks
+- conclusion boundaries are stated
 
 Blocking issues:
 
@@ -105,6 +120,7 @@ Check:
 - every referenced figure exists or is clearly marked as planned
 - every referenced table exists
 - every figure or table has a source artifact
+- paper figures are Type 3 (论文图) — no Type 1 (诊断图) accidentally in the paper
 - captions explain the takeaway
 - visual evidence supports the related claim
 - no decorative figure is used as evidence
@@ -120,10 +136,12 @@ Blocking issues:
 
 Check:
 
-- assumptions are necessary
-- notation is defined before use
+- assumptions are necessary and linked to modeling needs
+- notation is defined before use and consistent with global symbol table
 - equations match variables and units
 - numerical claims have artifacts
+- method description matches final method explanation (not candidate pool)
+- results come from final result analysis (not raw experiment outputs)
 - limitations are included
 - conclusion does not introduce new claims
 - abstract does not overstate results
@@ -135,20 +153,31 @@ Blocking issues:
 - hidden limitation that affects the conclusion
 - conclusion exceeds evidence
 
+## Anti-fabrication
+
+Check:
+
+- no fabricated data, references, results, figures, or experiments
+- no invented numerical values
+- no unsupported superiority claims
+- no hidden uncertainty
+- no decorative figures presented as evidence
+
 ## Artifact traceability
 
 For each major claim, identify at least one supporting artifact:
 
-| Claim type             | Expected artifact                    |
-| ---------------------- | ------------------------------------ |
-| problem interpretation | problem parse                        |
-| method choice          | method plan                          |
-| data statement         | data report                          |
-| numerical result       | result file                          |
-| figure claim           | figure source file                   |
-| robustness claim       | robustness report                    |
-| code-based result      | reviewed script and output           |
-| final conclusion       | paper section plus supporting result |
+| Claim type | Expected artifact |
+|------------|-------------------|
+| problem interpretation | problem parse |
+| method choice | final method explanation |
+| data statement | data report |
+| numerical result | result file under `results/Qx/experiments/` |
+| figure claim | figure source file |
+| robustness claim | robustness report under `robustness/Qx/` |
+| code-based result | reviewed script and output + `run_summary.json` |
+| final conclusion | paper section plus supporting result |
+| reference | `paper/refs.bib` entry + reference audit |
 
 If the artifact cannot be found, the claim should be removed or marked incomplete.
 
@@ -156,53 +185,29 @@ If the artifact cannot be found, the claim should be removed or marked incomplet
 
 Use the earliest skill that can fix the issue.
 
-| Issue                            | Repair skill            |
-| -------------------------------- | ----------------------- |
-| problem misunderstood            | `problem-parser`        |
-| wrong task type                  | `problem-classifier`    |
-| method does not fit task or data | `method-selector`       |
-| data issue                       | `data-auditor-cleaner`  |
-| missing result generation        | `model-code-generator`  |
-| code or output mismatch          | `code-reviewer`         |
-| missing robustness evidence      | `robustness-checker`    |
-| unsupported visual               | `figure-table-planner`  |
-| unsupported or unclear writing   | `paper-section-writer`  |
-| multiple blockers across stages  | `workflow-orchestrator` |
+| Issue | Repair skill |
+|-------|-------------|
+| problem misunderstood | `problem-parser` |
+| wrong task type | `problem-classifier` |
+| method does not fit task or data | `method-selector` |
+| symbol conflict across subquestions | `symbol-table-builder` |
+| missing or conflicting assumptions | `model-assumptions-builder` |
+| data issue | `data-auditor-cleaner` |
+| missing method explanation (Rule 1) | `final-method-explainer` |
+| missing result analysis (Rule 2) | `result-report-generator` |
+| missing solution package (Rule 3) | `solution-package-builder` |
+| missing result generation | code generators |
+| code or output mismatch | `code-reviewer` |
+| missing robustness evidence | `robustness-checker` |
+| unsupported visual | `figure-table-planner` |
+| missing or low-quality figure | `math-figure-generator` |
+| unsupported or unclear writing | `paper-section-writer` |
+| language or overclaim issues | `paper-polisher` |
+| unverified or fabricated citation | `reference-manager` |
+| multiple blockers across stages | `workflow-orchestrator` |
 
-## Minimal QA report
-
-A QA report should include:
-
-```json
-{
-  "qa_status": "failed",
-  "final_assembly_allowed": false,
-  "blocking_issues": [
-    {
-      "issue": "Q3 has no validated result artifact.",
-      "why_it_matters": "The final paper cannot answer all required subquestions.",
-      "repair_skill": "model-code-generator"
-    }
-  ],
-  "minor_issues": [
-    {
-      "issue": "Caption for Fig.2 does not state the main takeaway.",
-      "repair_skill": "paper-section-writer"
-    }
-  ],
-  "unsupported_claims": [
-    {
-      "claim": "The model is globally stable.",
-      "reason": "Only limited sensitivity checks were completed."
-    }
-  ],
-  "recommended_next_skill": "workflow-orchestrator"
-}
-```
-
-## **Practical rule**
+## Practical rule
 
 If QA fails, do not assemble the final paper.
 
 Fix the earliest blocker first.
-

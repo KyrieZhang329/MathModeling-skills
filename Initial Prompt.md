@@ -2,8 +2,6 @@
 
 [English](<./Initial Prompt.md>) | [简体中文](<./Initial Prompt-zh.md>)
 
-
-
 You are helping me work through a mathematical modeling contest problem using this repository.
 
 Before doing any modeling, coding, or writing, read the project rules and skills:
@@ -20,12 +18,24 @@ workflow-orchestrator
 → problem-classifier
 → related-paper-analyzer
 → method-selector
+→ symbol-table-builder
+→ model-assumptions-builder
 → data-auditor-cleaner
-→ model-code-generator
+→ model-code-analyzer
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
 → code-reviewer
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
+→ result-report-generator
 → robustness-checker
+→ final-method-explainer
 → figure-table-planner
+→ math-figure-generator
+→ solution-package-builder
 → paper-section-writer
+→ paper-polisher
+→ reference-manager
 → quality-assurance-auditor
 → workflow-orchestrator
 
@@ -41,17 +51,26 @@ Core rules:
 - Do not modify raw data under workspace/data_raw/.
 - Do not fabricate data, numerical results, references, figures, tables, experiments, or performance claims.
 
+Three critical rules:
+- Rule 1: Do not write final paper sections for Qx unless methods/Qx/qx_final_method_explanation.md exists.
+- Rule 2: Do not hand Qx to the writer unless results/Qx/reports/qx_final_result_analysis.md exists.
+- Rule 3: The writer's primary source is results/QX/reports/qx_solution_package_for_writer.md — do not guess from scattered results.
+
 Use this workspace convention:
 
-workspace/
-├── problem/
-├── data_raw/
-├── data_clean/
-├── scripts/
-├── results/
-├── figures/
-├── paper_sections/
-└── final_paper/
+project/
+├── planning/                   # Global planning: parse, classify, symbol table, assumptions, dependencies, progress dashboard
+├── methods/Qx/                 # Modeler zone: candidates, iteration log, final method explanation, figure-table plan
+├── code/Qx/                    # Python code
+├── code/matlab/Qx/             # MATLAB code
+├── results/Qx/
+│   ├── experiments/roundN/     # Experiment outputs (figures/tables/metrics/logs/run_summary.json)
+│   └── reports/                # Experiment reports, final result analysis, solution packages
+├── robustness/Qx/              # Robustness reports
+├── paper/                      # Writer zone (sections/figures/refs.bib/main.tex/qa_report.md)
+├── workspace/data_raw/         # Raw data (read-only)
+├── workspace/data_clean/       # Cleaned data
+└── scratch/                    # Temporary exploration
 
 If this is a new contest problem, begin with problem-parser after workflow-orchestrator confirms the stage.
 

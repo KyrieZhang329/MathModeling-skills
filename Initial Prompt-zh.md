@@ -18,12 +18,24 @@ workflow-orchestrator
 → problem-classifier
 → related-paper-analyzer
 → method-selector
+→ symbol-table-builder
+→ model-assumptions-builder
 → data-auditor-cleaner
-→ model-code-generator
+→ model-code-analyzer
+   ├── python-model-code-generator
+   └── matlab-model-code-generator
 → code-reviewer
+   ├── python-code-reviewer
+   └── matlab-code-reviewer
+→ result-report-generator
 → robustness-checker
+→ final-method-explainer
 → figure-table-planner
+→ math-figure-generator
+→ solution-package-builder
 → paper-section-writer
+→ paper-polisher
+→ reference-manager
 → quality-assurance-auditor
 → workflow-orchestrator
 
@@ -34,22 +46,31 @@ workflow-orchestrator
 - 题目没有解析完成前，不要进入方法选择。
 - 方法计划没有验证前，不要生成代码。
 - 没有结果 artifact 前，不要写带具体数字的论文结论。
-- 没有 baseline 和稳健性 / 敏感性检查前，不要声称模型更优。
+- 没有 baseline 和稳健性/敏感性检查前，不要声称模型更优。
 - QA 没通过前，不要组装最终论文。
 - 不要修改 workspace/data_raw/ 下的原始数据。
 - 不要编造数据、数值结果、参考文献、图表、实验或模型性能结论。
 
+三条关键规则：
+- 规则 1：没有最终方法详解（methods/Qx/qx_final_method_explanation.md），不准写最终论文。
+- 规则 2：没有最终结果分析（results/Qx/reports/qx_final_result_analysis.md），不准交给论文手。
+- 规则 3：论文手只看材料包（results/QX/reports/qx_solution_package_for_writer.md），不从零散结果里猜。
+
 请使用以下 workspace 约定：
 
-workspace/
-├── problem/
-├── data_raw/
-├── data_clean/
-├── scripts/
-├── results/
-├── figures/
-├── paper_sections/
-└── final_paper/
+project/
+├── planning/                   # 全局规划（解析/分类/符号表/假设/依赖/进度看板）
+├── methods/Qx/                 # 建模手区（候选方法/迭代记录/最终方法详解/图表规划）
+├── code/Qx/                    # Python 代码
+├── code/matlab/Qx/             # MATLAB 代码
+├── results/Qx/
+│   ├── experiments/roundN/     # 实验输出（figures/tables/metrics/logs/run_summary.json）
+│   └── reports/                # 实验报告/最终结果分析/论文材料包
+├── robustness/Qx/              # 稳健性报告
+├── paper/                      # 论文手区（sections/figures/refs.bib/main.tex/qa_report.md）
+├── workspace/data_raw/         # 原始数据（只读）
+├── workspace/data_clean/       # 清洗后数据
+└── scratch/                    # 临时探索
 
 如果这是一个新的竞赛题，请先运行 workflow-orchestrator 判断当前阶段，然后从 problem-parser 开始。
 
@@ -86,7 +107,7 @@ workspace/
    在最终定方法前，收集并分析相关论文、报告或参考解法。提炼可迁移的方法思路、假设、数据需求和风险。不要编造参考文献，也不要盲目照搬论文模型。
 
 5. 建模路线  
-   对每个子问题，先比较 2–4 个候选建模方案，再推荐一个执行路线。baseline、主模型和可选改进模型不能替代“多方案比较”。
+   对每个子问题，先比较 2–4 个候选建模方案，再推荐一个执行路线。baseline、主模型和可选改进模型不能替代"多方案比较"。
 
 6. 求解与验证  
    明确需要哪些输出、指标、表格和图。需要和 baseline 对比，并规划稳健性或敏感性检查。
