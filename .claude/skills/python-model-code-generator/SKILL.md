@@ -6,9 +6,9 @@ license: MIT
 
 # Purpose
 
-Generate Python modeling code from a validated method plan and cleaned data.
+Generate Python modeling code from a validated candidate method pool and cleaned data.
 
-This skill implements the approved baseline, main model, and optional improved model as Python scripts. It should produce code that reads cleaned data, runs the planned model, saves result tables, saves figures, and produces portable artifacts for downstream robustness checks and paper writing.
+This skill implements the approved candidate methods (baseline, main candidates, optional improved) as Python scripts. It should produce code that reads cleaned data, runs the planned models, saves results in the `experiments/roundN/` output structure, generates a `run_summary.json`, and produces portable artifacts for downstream experiment reports, robustness checks, and paper writing.
 
 This skill does not choose the model, clean raw data, review code, run final QA, or write paper sections.
 
@@ -19,9 +19,8 @@ Use this skill:
 - After `model-code-analyzer` hands off to `python-model-code-generator`.
 - When `implementation.target = python`.
 - When Python is allowed by the contest or requested by the user.
-- When the method plan and cleaned data are ready.
-- When executable `.py` scripts are needed for baseline, main, or improved models.
-- When Python is used for data preprocessing, prototyping, validation, or final modeling.
+- When the candidate method pool and cleaned data are ready.
+- When executable `.py` scripts are needed for one or more candidate methods in a specific experiment round.
 
 # Preconditions
 
@@ -29,14 +28,17 @@ The following should already exist or be provided:
 
 - A validated problem parse.
 - A validated problem classification artifact.
-- A validated method plan.
+- A candidate method pool at `methods/Qx/qx_method_candidates.md`.
 - `implementation.target = python`.
 - Cleaned data under `workspace/data/data_clean/`, unless the model does not need tabular data.
 - Data audit report and field mapping if data is used.
-- Expected result files and figure files from the method plan.
+- `code/model-code-analyzer.md` — the code thinking document specifying round number, methods to implement, and output structure.
+- Expected result files and figure files from the candidate method pool.
 - Runtime notes if specific dependency or portability constraints exist.
 
-If the method plan is missing, hand back to `method-selector`.
+If the candidate method pool is missing, hand back to `method-selector`.
+
+If `code/model-code-analyzer.md` is missing, hand back to `model-code-analyzer`.
 
 If cleaned data is required but missing, hand back to `data-auditor-cleaner`.
 
@@ -46,15 +48,16 @@ If `implementation.target` is not `python`, hand back to `model-code-analyzer`.
 
 Use or request:
 
-- `workspace/problem/method-selector/method_plan.json`
-- `workspace/code/model-code-analyzer.md`, if available
-- `workspace/data/data_report.md`, if available
-- cleaned data under `workspace/data/data_clean/`
-- field mapping from the data audit stage
-- required model inputs
-- expected result outputs
-- expected figure outputs
-- runtime notes such as:
+- `methods/Qx/qx_method_candidates.md` — candidate method pool for each subquestion.
+- `code/model-code-analyzer.md` — code thinking document.
+- `workspace/data/data_report.md`, if available.
+- Cleaned data under `workspace/data/data_clean/`.
+- Field mapping from the data audit stage.
+- Required model inputs per candidate method.
+- Expected result outputs per candidate method.
+- Expected figure outputs per candidate method.
+- The round number (N for `roundN`).
+- Runtime notes such as:
   - `minimal-dependencies`
   - `portable-artifacts`
   - `avoid-notebook-only-code`
@@ -63,16 +66,16 @@ Use or request:
 
 # Workflow
 
-1. Read the method plan.
-   - Identify each subquestion.
-   - Identify baseline, main model, and optional improved model.
-   - Identify required inputs, expected outputs, validation needs, and robustness needs.
-   - Do not change the selected modeling route.
+1. Read the code thinking document and candidate method pool.
+   - Identify the target subquestion(s) and round number.
+   - Identify which methods are to be implemented in this round (baseline, main candidates, optional improved).
+   - Identify required inputs, expected outputs, validation needs, and robustness needs per method.
+   - Do not change the selected methods or modeling route.
 
 2. Confirm Python target.
    - Confirm `implementation.target = python`.
    - Preserve all runtime notes.
-   - Use a minimal, common scientific Python stack.
+   - Use a minimal, common scientific Python stack (`numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`).
 
 3. Check data readiness.
    - Use cleaned data from `workspace/data/data_clean/`.
@@ -80,64 +83,98 @@ Use or request:
    - Do not overwrite raw data.
    - Confirm required fields match the data audit report.
 
-4. Plan script structure.
-   - Save Python code under `workspace/code/python/`.
-   - Use one folder per subquestion such as `workspace/code/python/Q1/` or `workspace/code/python/Q2/`.
+4. Plan script structure per subquestion.
+   - Save Python code under `code/Qx/` (e.g., `code/Q1/`, `code/Q2/`).
+   - One script per candidate method: `qx_m1_baseline.py`, `qx_m2_main.py`, `qx_m3_improved.py`.
+   - A `README.md` in each code folder: run order, inputs, outputs, dependencies.
+   - A `run_all.py` only if batch execution is useful.
    - Prefer plain `.py` scripts over notebook-only workflows.
    - Keep scripts runnable from the project root.
-   - Keep one script per subquestion when tasks are separable.
-   - Use a `run_all.py` script only if it clearly improves execution order.
    - Use small helper functions when they improve clarity.
 
-5. Generate baseline code.
-   - Implement the baseline first.
-   - Save baseline outputs separately.
-   - Make baseline outputs comparable with the main model.
+5. Generate code for each candidate method.
+   - **Input**: Read from `workspace/data/data_clean/`.
+   - **Processing**: Implement the mathematical logic from the candidate method pool.
+   - **Save results**: Save to `results/Qx/experiments/roundN/tables/`.
+   - **Save figures**: Save to `results/Qx/experiments/roundN/figures/`.
+   - **Save metrics**: Save to `results/Qx/experiments/roundN/metrics/`.
+   - **Write log**: Write execution log to `results/Qx/experiments/roundN/logs/`.
+   - **Write run_summary.json**: At end of `run_all.py` or the last script, generate `results/Qx/experiments/roundN/run_summary.json`.
 
-6. Generate main model code.
-   - Implement the approved main model.
-   - Use variable names that match the method plan where practical.
+6. Implement baseline code first.
+   - Implement the baseline method first.
+   - Save baseline outputs separately (e.g., `m1_scores.csv`).
+   - Make baseline outputs comparable with other methods.
+
+7. Implement main and optional methods.
+   - Implement each candidate method with the same output conventions.
+   - Use variable names that match the candidate method specification where practical.
    - Save intermediate values needed for explanation or robustness checks.
 
-7. Generate optional improved model code only if justified.
-   - Add optional improvements only when the method plan marks them as feasible.
-   - Keep optional improvement code clearly separated.
-   - Do not add advanced methods for appearance.
+8. Implement run_summary.json generation.
+   - After all methods have executed, write `run_summary.json` with:
+     ```python
+     import json
+     from datetime import datetime
 
-8. Save artifacts.
-   - Save result tables under `workspace/results/`.
-   - Save figures under `workspace/figures/`.
-   - Prefer portable outputs such as `.csv`, `.json`, and `.png`.
-   - Do not rely only on console output.
-   - Avoid Python-only binary outputs unless explicitly useful and documented.
+     run_summary = {
+         "question": "Q1",
+         "round": "round1",
+         "execution_timestamp": datetime.now().isoformat(),
+         "implementation_target": "python",
+         "random_seed": SEED,
+         "methods": [
+             {
+                 "method_id": "M1",
+                 "method_name": "equal_weight_scoring",
+                 "script": "code/Q1/q1_m1_baseline.py",
+                 "status": "success",
+                 "execution_time_seconds": 12.5,
+                 "input_files": ["workspace/data/data_clean/indicator_data.csv"],
+                 "output_files": ["results/Q1/experiments/round1/tables/m1_scores.csv"],
+                 "figure_files": ["results/Q1/experiments/round1/figures/m1_score_bar.png"],
+                 "metrics_summary": {"score_range": [0.45, 0.92], "ranking_top3": ["A", "B", "C"]},
+                 "errors": [],
+                 "warnings": []
+             }
+         ],
+         "data_inputs": ["workspace/data/data_clean/indicator_data.csv"],
+         "environment": {
+             "python_version": "3.10",
+             "key_dependencies": ["numpy", "pandas", "matplotlib", "scipy"]
+         }
+     }
+     with open('results/Q1/experiments/round1/run_summary.json', 'w') as f:
+         json.dump(run_summary, f, indent=2, ensure_ascii=False)
+     ```
 
-9. Add run instructions.
-   - State the script order.
-   - State expected input files.
-   - State expected output files.
+9. Add a README.md per code folder.
+   - State the subquestion and round.
+   - List scripts and their roles.
+   - State run order.
+   - List expected input data files.
+   - List expected output paths.
    - State required dependencies.
    - State known portability risks.
 
 10. Hand off to `code-reviewer`.
-   - The router should then route `.py` scripts to `python-code-reviewer`.
+    - The router should route `.py` scripts to `python-code-reviewer`.
 
 # Outputs
 
 Produce Python implementation artifacts such as:
 
-- `workspace/code/python/Q1/q1_baseline.py`
-- `workspace/code/python/Q1/q1_main.py`
-- `workspace/code/python/Q1/q1_improved.py`
-- `workspace/code/python/run_all.py`
-- `workspace/code/python/code_generation_summary.md`
-- `workspace/results/q1_baseline_results.csv`
-- `workspace/results/q1_main_results.csv`
-- `workspace/results/q1_model_summary.json`
-- `workspace/figures/q1_ranking.png`
-- run instructions
-- implementation summary
-- known dependency or portability risks
-- recommended next skill
+- `code/Q1/README.md`
+- `code/Q1/q1_m1_baseline.py`
+- `code/Q1/q1_m2_main.py`
+- `code/Q1/q1_m3_improved.py` (if applicable)
+- `code/Q1/run_all.py` (if useful)
+- `results/Q1/experiments/roundN/` (created by running the scripts):
+  - `tables/*.csv`
+  - `figures/*.png`
+  - `metrics/*.json`
+  - `logs/*.log`
+  - `run_summary.json`
 
 # Output format
 
@@ -147,34 +184,31 @@ Prefer this JSON-compatible summary:
 {
   "python_code_generation_summary": {
     "implementation_target": "python",
-    "runtime_notes": [
-      "minimal-dependencies",
-      "portable-artifacts"
-    ],
+    "subquestion": "Q1",
+    "round": "round1",
+    "runtime_notes": ["minimal-dependencies", "portable-artifacts"],
     "generated_scripts": [
-      "workspace/code/python/Q1/q1_baseline.py",
-      "workspace/code/python/Q1/q1_main.py"
+      "code/Q1/q1_m1_baseline.py",
+      "code/Q1/q1_m2_main.py",
+      "code/Q1/run_all.py"
     ],
     "data_inputs": [
-      "workspace/data/data_clean/clean_data.csv"
+      "workspace/data/data_clean/indicator_data.csv"
     ],
     "result_outputs": [
-      "workspace/results/q1_baseline_results.csv",
-      "workspace/results/q1_main_results.csv"
+      "results/Q1/experiments/round1/tables/m1_scores.csv",
+      "results/Q1/experiments/round1/tables/m2_scores.csv",
+      "results/Q1/experiments/round1/metrics/m1_metrics.json",
+      "results/Q1/experiments/round1/metrics/m2_metrics.json"
     ],
     "figure_outputs": [
-      "workspace/figures/q1_ranking.png"
+      "results/Q1/experiments/round1/figures/m1_score_bar.png",
+      "results/Q1/experiments/round1/figures/m2_weight_bar.png"
     ],
     "run_instructions": [
-      "python workspace/code/python/Q1/q1_baseline.py",
-      "python workspace/code/python/Q1/q1_main.py"
+      "cd code/Q1 && python run_all.py"
     ],
-    "markdown_summary": "workspace/code/python/code_generation_summary.md",
-    "dependencies": [
-      "numpy",
-      "pandas",
-      "matplotlib"
-    ],
+    "dependencies": ["numpy", "pandas", "matplotlib", "scipy"],
     "known_risks": [
       "Column names must match the data audit report before interpretation."
     ],
@@ -183,39 +217,31 @@ Prefer this JSON-compatible summary:
 }
 ```
 
-If JSON is too rigid, use a concise Markdown report with the same fields.
-
 # Python coding rules
 
 Use clear, minimal, reviewable Python code.
 
 Prefer:
-
 - plain `.py` scripts
 - `pathlib.Path`
-- `numpy`
-- `pandas`
-- `scipy` when needed
-- `scikit-learn` when justified
-- `matplotlib`
-- relative paths
-- explicit result saving
-- fixed random seeds
-- portable outputs such as `.csv`, `.json`, and `.png`
+- `numpy`, `pandas`, `scipy`, `scikit-learn` (when justified), `matplotlib`
+- relative paths from project root
+- explicit result saving to `results/Qx/experiments/roundN/`
+- fixed random seeds (`SEED = 2026`)
+- portable outputs: `.csv`, `.json`, `.png`
+- `run_summary.json` generation
 
 Avoid unless explicitly approved:
-
 - notebook-only code
 - hard-coded local absolute paths
 - hidden data cleaning inside modeling scripts
-- heavy deep learning frameworks
+- heavy deep learning frameworks (`torch`, `tensorflow`)
 - unnecessary third-party packages
 - Python-only output formats as the only result artifact
 - code that only prints results without saving them
 - complex abstractions that make contest debugging harder
 
 Common accepted dependencies:
-
 ```text
 numpy
 pandas
@@ -224,8 +250,7 @@ scikit-learn
 matplotlib
 ```
 
-Avoid heavy dependencies unless the method plan explicitly justifies them:
-
+Avoid heavy dependencies unless explicitly justified:
 ```text
 torch
 tensorflow
@@ -240,64 +265,57 @@ specialized optimization packages
 Use relative paths where practical.
 
 Recommended paths:
-
 ```text
 workspace/data/data_clean/
-workspace/code/python/
-workspace/results/
-workspace/figures/
+code/Qx/
+results/Qx/experiments/roundN/
+  ├── tables/
+  ├── figures/
+  ├── metrics/
+  ├── logs/
+  └── run_summary.json
 ```
 
-Avoid hard-coded absolute paths such as:
+Avoid hard-coded absolute paths.
 
-```text
-/Users/...
-C:\Users\...
-D:\...
-```
-
-If path setup is needed, define paths near the top of the script:
-
+Example path setup:
 ```python
 from pathlib import Path
 
 ROOT = Path(".")
 DATA_DIR = ROOT / "workspace" / "data" / "data_clean"
-RESULT_DIR = ROOT / "workspace" / "results"
-FIGURE_DIR = ROOT / "workspace" / "figures"
+RESULT_DIR = ROOT / "results" / "Q1" / "experiments" / "round1"
+TABLE_DIR = RESULT_DIR / "tables"
+FIGURE_DIR = RESULT_DIR / "figures"
+METRIC_DIR = RESULT_DIR / "metrics"
+LOG_DIR = RESULT_DIR / "logs"
 
-RESULT_DIR.mkdir(parents=True, exist_ok=True)
-FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+for d in [TABLE_DIR, FIGURE_DIR, METRIC_DIR, LOG_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
 ```
 
 # Artifact rules
 
 - Read cleaned data from `workspace/data/data_clean/`.
 - Do not modify files under `workspace/data/data_raw/`.
-- Save Python scripts under `workspace/code/python/`.
-- Save numeric outputs under `workspace/results/`.
-- Save figures under `workspace/figures/`.
-- Use clear file names such as:
-  - `q1_baseline.py`
-  - `q1_main.py`
-  - `q1_improved.py`
-  - `q1_baseline_results.csv`
-  - `q1_main_results.csv`
-  - `q1_model_summary.json`
-  - `q1_ranking.png`
-- Separate baseline outputs from main model outputs.
+- Save Python scripts under `code/Qx/`.
+- Save numeric outputs under `results/Qx/experiments/roundN/tables/`.
+- Save figures under `results/Qx/experiments/roundN/figures/`.
+- Save metrics under `results/Qx/experiments/roundN/metrics/`.
+- Save logs under `results/Qx/experiments/roundN/logs/`.
+- Generate `run_summary.json` under `results/Qx/experiments/roundN/`.
+- Use clear file names with method prefix:
+  - `m1_scores.csv`, `m2_weights.csv`, `m1_metrics.json`
+  - `m1_score_bar.png`, `m2_weight_distribution.png`
+- Separate outputs from different methods clearly.
 - Save important intermediate results if later paper explanation or robustness checks require them.
 
 # Randomness rules
 
 If randomness is used:
-
-- Set fixed seeds.
-- Record the seed in comments and summary.
-- Avoid hidden random initialization.
-- Save outputs from each stochastic run if robustness checks require repeated trials.
-
-Example:
+- Set fixed seeds: `random.seed(SEED)`, `np.random.seed(SEED)`.
+- Record the seed in comments and `run_summary.json`.
+- For scikit-learn: pass `random_state=SEED` where supported.
 
 ```python
 import random
@@ -307,8 +325,6 @@ SEED = 2026
 random.seed(SEED)
 np.random.seed(SEED)
 ```
-
-If using scikit-learn models with randomness, pass `random_state=SEED` where supported.
 
 # Data handling rules
 
@@ -323,41 +339,41 @@ If using scikit-learn models with randomness, pass `random_state=SEED` where sup
 # Plotting rules
 
 - Use `matplotlib` by default.
-- Save figures with `plt.savefig(...)`.
-- Use readable labels, units, legends, and titles where needed.
-- Close figures after saving when generating multiple plots.
+- Save figures with `plt.savefig(FIGURE_DIR / "m1_result.png", dpi=300, bbox_inches='tight')`.
+- Use `svg.fonttype = 'none'` for editable SVG text.
+- Use readable labels, units, legends, and titles.
+- Close figures after saving: `plt.close(fig)`.
 - Do not rely on interactive display.
-
-Example:
 
 ```python
 import matplotlib.pyplot as plt
 
-plt.figure()
-plt.plot(x, y)
-plt.xlabel("x")
-plt.ylabel("y")
-plt.tight_layout()
-plt.savefig(FIGURE_DIR / "q1_result.png", dpi=300)
-plt.close()
+plt.rcParams['svg.fonttype'] = 'none'
+fig, ax = plt.subplots()
+ax.plot(x, y)
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+fig.tight_layout()
+fig.savefig(FIGURE_DIR / "m1_result.png", dpi=300, bbox_inches='tight')
+fig.savefig(FIGURE_DIR / "m1_result.svg", bbox_inches='tight')
+plt.close(fig)
 ```
 
 # Commenting rules
 
 Use comments to explain:
-
-- data inputs
-- key variables
-- model steps
-- non-obvious formulas
-- output files
+- data inputs and their source paths
+- key variables and their meanings
+- model steps and non-obvious formulas
+- output files and their destinations
 - assumptions inherited from the method plan
+- random seed and reproducibility notes
 
 Avoid over-commenting trivial syntax.
 
 # Rules
 
-- Do not select or change the model.
+- Do not select or change the model — implement what the candidate method pool specifies.
 - Do not clean raw data.
 - Do not fabricate data, labels, parameters, metrics, or results.
 - Do not write paper text.
@@ -367,22 +383,27 @@ Avoid over-commenting trivial syntax.
 - Do not hide assumptions inside code.
 - Do not silently drop rows or columns.
 - Do not overwrite raw data.
+- Always generate `run_summary.json`.
+- Always create the full `experiments/roundN/` directory structure.
 - Do not claim the code is reviewed or correct before `python-code-reviewer`.
+- Separate baseline outputs from main method outputs.
 
 # Verification
 
-Before handoff, verify:
+Before handing off, verify:
 
 - `implementation.target = python`.
-- Every generated script maps to a subquestion and method-plan item.
-- Baseline code exists for every main model unless explicitly impossible.
-- Scripts are saved under `workspace/code/python/`.
+- Every generated script maps to a method in the candidate method pool.
+- Baseline code exists for every subquestion unless explicitly impossible.
+- Scripts are saved under `code/Qx/`.
+- Scripts write outputs to `results/Qx/experiments/roundN/`.
 - Cleaned data paths are used.
 - No raw data file is overwritten.
 - Random seeds are fixed where needed.
-- Results are saved under `workspace/results/`.
-- Figures are saved under `workspace/figures/`.
+- `run_summary.json` generation is implemented.
+- Figures are saved to `results/Qx/experiments/roundN/figures/`.
 - Outputs are portable enough for downstream checks.
+- A `README.md` exists in the code folder.
 - Dependency risks are listed.
 - The next skill is `code-reviewer`.
 
@@ -390,8 +411,8 @@ Before handoff, verify:
 
 Stop and report a blocker if:
 
-- The method plan is missing.
-- The method plan is not validated.
+- The candidate method pool is missing.
+- `code/model-code-analyzer.md` is missing.
 - `implementation.target` is not `python`.
 - Cleaned data is required but unavailable.
 - Required data fields are missing.
@@ -408,12 +429,11 @@ This skill must stop instead of guessing when:
 - Important parameters are unspecified and cannot be safely defaulted.
 - The method requires a heavy dependency that is not approved.
 - The code would need to overwrite raw data.
-- A script would produce results that cannot be traced to the method plan.
+- A script would produce results that cannot be traced to the candidate method pool.
 - Continuing would change the mathematical meaning of the model.
 - Python is not allowed by contest rules for the intended stage.
 
 When stopping, output:
-
 - blocker
 - why it matters
 - affected subquestion or model
@@ -426,64 +446,66 @@ When stopping, output:
 
 After generating Python scripts, hand off to:
 
-```
-code-reviewer
-```
+`code-reviewer`
 
 The handoff should include:
-
 - generated `.py` script paths
-- method plan path
+- code folder `README.md` path
+- candidate method pool path
 - cleaned data paths
 - field mapping
-- expected result paths
+- expected result paths under `results/Qx/experiments/roundN/`
 - expected figure paths
 - runtime notes
 - dependency notes
 - run instructions
 - known risks and assumptions
 
-`code-reviewer` should then route the scripts to:
+`code-reviewer` should route the scripts to `python-code-reviewer`.
 
-```
-python-code-reviewer
-```
-
-Do not hand off directly to `robustness-checker`.
+Do not hand off directly to `robustness-checker` or `result-report-generator`.
 
 # Examples
 
-## Example 1: Generate Python evaluation model code
+## Example 1: Generate Python evaluation model code for round 1
 
 Input state:
-
-- Q1 uses equal-weight baseline and entropy-weight TOPSIS.
+- Q1 candidate pool: M1 (equal-weight baseline), M2 (entropy-TOPSIS).
 - Cleaned indicator data exists.
+- Round: round1.
 - `implementation.target = python`.
 
 Output:
-
 ```json
 {
   "python_code_generation_summary": {
     "implementation_target": "python",
+    "subquestion": "Q1",
+    "round": "round1",
     "generated_scripts": [
-      "workspace/code/python/Q1/q1_baseline.py",
-      "workspace/code/python/Q1/q1_entropy_topsis.py"
+      "code/Q1/q1_m1_baseline.py",
+      "code/Q1/q1_m2_entropy_topsis.py",
+      "code/Q1/run_all.py",
+      "code/Q1/README.md"
     ],
     "data_inputs": [
       "workspace/data/data_clean/indicator_data.csv"
     ],
     "result_outputs": [
-      "workspace/results/q1_equal_weight_results.csv",
-      "workspace/results/q1_entropy_topsis_results.csv"
+      "results/Q1/experiments/round1/tables/m1_equal_weight_scores.csv",
+      "results/Q1/experiments/round1/tables/m2_entropy_topsis_scores.csv",
+      "results/Q1/experiments/round1/tables/m2_weights.csv",
+      "results/Q1/experiments/round1/metrics/m1_metrics.json",
+      "results/Q1/experiments/round1/metrics/m2_metrics.json",
+      "results/Q1/experiments/round1/run_summary.json"
     ],
     "figure_outputs": [
-      "workspace/figures/q1_ranking_comparison.png"
+      "results/Q1/experiments/round1/figures/m1_score_bar.png",
+      "results/Q1/experiments/round1/figures/m2_weight_bar.png",
+      "results/Q1/experiments/round1/figures/m2_score_dist.png"
     ],
     "run_instructions": [
-      "python workspace/code/python/Q1/q1_baseline.py",
-      "python workspace/code/python/Q1/q1_entropy_topsis.py"
+      "cd code/Q1 && python run_all.py"
     ],
     "known_risks": [
       "Indicator direction must match the method plan before interpretation."
@@ -493,103 +515,14 @@ Output:
 }
 ```
 
-## Example 2: Generate Python prediction code
-
-Input state:
-
-- Q2 uses moving-average baseline and random forest regression.
-- Cleaned training data exists.
-- `implementation.target = python`.
-
-Output:
-
-```json
-{
-  "python_code_generation_summary": {
-    "implementation_target": "python",
-    "generated_scripts": [
-      "workspace/code/python/Q2/q2_baseline_moving_average.py",
-      "workspace/code/python/Q2/q2_random_forest.py"
-    ],
-    "data_inputs": [
-      "workspace/data/data_clean/train_data.csv"
-    ],
-    "result_outputs": [
-      "workspace/results/q2_baseline_metrics.csv",
-      "workspace/results/q2_random_forest_metrics.csv",
-      "workspace/results/q2_predictions.csv"
-    ],
-    "figure_outputs": [
-      "workspace/figures/q2_prediction_vs_actual.png"
-    ],
-    "run_instructions": [
-      "python workspace/code/python/Q2/q2_baseline_moving_average.py",
-      "python workspace/code/python/Q2/q2_random_forest.py"
-    ],
-    "known_risks": [
-      "Train-test split must be checked for leakage during code review."
-    ],
-    "recommended_next_skill": "code-reviewer"
-  }
-}
-```
-
-## Example 3: Blocked by missing cleaned data
-
-Input state:
-
-- Method plan exists.
-- `implementation.target = python`.
-- Raw data exists.
-- Cleaned data does not exist.
-
-Output:
+## Example 2: Blocked by missing candidate pool
 
 ```json
 {
   "blocked_items": [
-    "Cleaned data is required before Python code generation."
-  ],
-  "recommended_next_skill": "data-auditor-cleaner",
-  "recommended_next_action": "Audit and clean the raw data, then provide cleaned data paths and field mapping."
-}
-```
-
-## Example 4: Blocked by unsupported implementation target
-
-Input state:
-
-- Method plan says `implementation.target = matlab`.
-- This skill was invoked directly.
-
-Output:
-
-```json
-{
-  "blocked_items": [
-    "python-model-code-generator was invoked, but implementation.target is matlab."
-  ],
-  "recommended_next_skill": "model-code-analyzer",
-  "recommended_next_action": "Route the method plan through model-code-analyzer."
-}
-```
-
-## Example 5: Blocked by contest language restriction
-
-Input state:
-
-- Contest requires MATLAB / 北太天元 for official computation.
-- Method plan says `implementation.target = python`.
-- No mixed-language workflow is approved.
-
-Output:
-
-```json
-{
-  "blocked_items": [
-    "Python is not approved for official computation under the contest language requirement."
+    "The candidate method pool is missing at methods/Q1/q1_method_candidates.md. Cannot determine which methods to implement."
   ],
   "recommended_next_skill": "method-selector",
-  "recommended_next_action": "Change implementation.target to matlab or explicitly define Python as an auxiliary preprocessing branch."
+  "recommended_next_action": "Generate the candidate method pool for Q1 before code generation."
 }
 ```

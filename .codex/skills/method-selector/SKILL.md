@@ -6,9 +6,11 @@ license: MIT
 
 # Purpose
 
-Select feasible modeling routes for each classified subquestion in a mathematical modeling contest.
+Generate a candidate method pool for each classified subquestion in a mathematical modeling contest.
 
-This skill converts a validated problem parse, problem classification, and related-paper analysis into a method plan. For each subquestion, it should usually compare 2-4 candidate modeling schemes before recommending one execution route. Within the recommended route, it may still define a baseline model, a main model, and, when justified, an improved model.
+This skill converts validated problem parse, problem classification, and related-paper analysis into a structured method candidate pool. For each subquestion, it proposes 2-4 meaningfully different candidate modeling schemes, compares them on feasibility, interpretability, data fit, and implementation risk, and recommends a first-round execution priority. It specifies what each method expects as input, what it should output, and how its results should be evaluated.
+
+This skill focuses on generating the candidate pool — the actual method selection happens AFTER multi-round experiments, when the modeler reviews experiment reports and locks in the final method.
 
 This skill does not generate code, clean data, run experiments, create figures, or write paper sections.
 
@@ -18,9 +20,9 @@ Use this skill:
 
 - After `problem-parser`, `problem-classifier`, and `related-paper-analyzer` have produced validated artifacts.
 - Before data cleaning, code generation, robustness checks, figure planning, or paper writing.
-- When the team needs several contest-feasible modeling routes for each subquestion before committing to one execution plan.
-- When multiple plausible methods exist and the team needs a contest-feasible choice.
-- When a model choice must be justified against task type, data availability, interpretability, and time constraints.
+- When the modeler needs a structured set of candidate methods to consider for each subquestion.
+- When the user says: "what methods should we try for Q1?", "generate candidate methods", "build the method pool for Q2".
+- When the team needs to see multiple modeling approaches before committing to one.
 
 # Preconditions
 
@@ -48,539 +50,310 @@ Use or request:
 - Transferable ideas, cautions, and comparison notes from `workspace/papers/related_paper_analysis.md`.
 - Data inventory, missing data list, units, and known data risks.
 - User constraints, such as preferred implementation language, team skill level, contest deadline, or required interpretability.
-- Any known baseline requirements or scoring criteria.
 
 # Workflow
 
-1. Read the parsed problem and classification artifacts.
+1. Read the parsed problem, classification, and literature analysis artifacts.
    - Work subquestion by subquestion.
    - Respect dependencies between subquestions.
-   - Do not collapse different subquestions into one generic method.
+   - Do not collapse different subquestions into one generic method pool.
 
-2. For each subquestion, identify method requirements.
-   - Required output form.
+2. For each subquestion, identify the method requirements from:
+   - Required output form (ranking, prediction, plan, mechanism explanation, etc.).
    - Available data and missing data.
    - Interpretability requirement.
-   - Computational complexity.
-   - Implementation risk.
-   - Validation or evaluation requirement.
+   - Computational complexity and implementation time.
+   - Literature cues (what worked in similar problems).
+   - Validation and evaluation criteria.
 
-3. Generate candidate schemes.
-   - Propose 2-4 candidate modeling schemes for each subquestion when feasible.
-   - Keep schemes meaningfully different rather than cosmetic variants of the same idea.
-   - Use task type, data conditions, contest limits, and literature cues to justify why each scheme is worth considering.
+3. Generate 2-4 candidate schemes per subquestion.
+   - Each scheme must be meaningfully different — not cosmetic variants of the same idea.
+   - Each scheme must have a clear mathematical idea (what it does, not just a name).
+   - Each scheme must specify:
+     - **Math idea**: The core mathematical approach in 2-3 sentences.
+     - **Strengths**: Why this method fits this subquestion.
+     - **Weaknesses**: Known limitations, risks, or assumptions.
+     - **Expected output from programmer**: What result files, figures, and metrics the programmer should produce.
+     - **Evaluation metric**: How to judge whether this method's output is good.
+     - **Implementation difficulty**: easy / medium / hard.
+     - **First-round priority**: high (try first) / medium (try if time) / low (backup).
 
-4. Compare and recommend one execution route.
-   - Compare candidate schemes on feasibility, interpretability, implementation risk, data fit, and validation burden.
-   - Recommend one scheme for execution.
-   - Preserve the other schemes as explicit alternatives instead of collapsing them into a single hidden choice.
+4. Reject unsuitable methods explicitly.
+   - For each subquestion, identify methods that look tempting but are unsuitable.
+   - Give data-driven, time-driven, or interpretability-driven reasons for rejection.
+   - This prevents the team from wasting time on obviously poor choices.
 
-5. Define baseline, main model, and improved model inside the recommended route.
-   - Choose the baseline as the simplest meaningful reference inside the recommended route.
-   - Choose the main model as the preferred executable method for the contest.
-   - Choose an improved model only if it addresses a specific weakness and remains contest-feasible.
+5. Define baseline requirement.
+   - Every subquestion must have at least one baseline method in its candidate pool.
+   - The baseline should be the simplest meaningful reference method.
+   - State clearly which candidate is the baseline.
 
-6. Reject unsuitable methods.
-   - Explain why common tempting methods are not recommended.
-   - Reject methods unsupported by data size, data quality, interpretability needs, or implementation time.
+6. Recommend first-round execution strategy.
+   - State which 1-2 methods should be implemented and tested first.
+   - State under what conditions the team should try the other candidates.
+   - State what the modeler should look for in round 1 experiment reports.
 
-7. Define expected artifacts.
+7. Define expected artifacts per method.
    - Required input data.
-   - Expected intermediate outputs.
-   - Expected result tables.
-   - Expected figures.
-   - Required robustness or sensitivity checks.
-   - Handoff requirements for `data-auditor-cleaner` and `model-code-analyzer`.
+   - Expected output files (results, figures, metrics).
+   - Expected validation checks.
+   - How to compare this method against others.
 
-8. Produce a method plan.
-   - Keep it structured.
-   - Make every method traceable to a subquestion.
-   - Save the overall JSON plan under `workspace/problem/method-selector/`.
-   - Write one Markdown comparison document per subquestion under `workspace/problem/method-selector/`, such as `Q1.md`, `Q2.md`, or `Q3.md`.
-   - Each subquestion Markdown document should compare 2-4 candidate schemes and identify the recommended route for that subquestion.
-   - Do not start implementation inside this skill.
+8. Produce the candidate method pool.
+   - Save per-subquestion files under `methods/Qx/`.
+   - Each file is `methods/Qx/qx_method_candidates.md`.
+   - Also produce a global pool summary at `methods/method_pool_summary.md` (optional, useful for overview).
 
 # Outputs
 
-Produce a method plan as paired problem-stage artifacts:
+Produce per-subquestion candidate method pool files:
 
-- `workspace/problem/method-selector/method_plan.json`
-- `workspace/problem/method-selector/Q1.md`
-- `workspace/problem/method-selector/Q2.md`
-- additional per-subquestion Markdown files such as `Q3.md` or `Q4.md` when needed
+- `methods/Q1/q1_method_candidates.md`
+- `methods/Q2/q2_method_candidates.md`
+- `methods/Q3/q3_method_candidates.md`
+- `methods/Q4/q4_method_candidates.md` (if needed)
+- `methods/method_pool_summary.md` (optional global overview)
 
-The artifacts should contain:
+Each file must include:
 
-- `method_plan_summary`
-- `subproblem_methods`
-- `candidate_schemes`
-- `recommended_scheme_id`
-- `dependency_plan`
-- `data_requirements`
-- `expected_artifacts`
-- `validation_plan`
-- `robustness_plan`
-- `rejected_methods`
-- `implementation_notes`
-- `recommended_next_skill`
+- Subquestion goal (from problem parse).
+- Problem type (from classifier).
+- Required output.
+- Candidate method pool (2-4 methods).
+- Rejected methods and reasons.
+- Baseline designation.
+- First-round execution recommendation.
+- Data requirements.
+- Evaluation criteria per method.
 
 # Output format
 
-Prefer this JSON-compatible structure for `workspace/problem/method-selector/method_plan.json`:
+Each `methods/Qx/qx_method_candidates.md` must follow this structure:
 
-```json
-{
-  "method_plan_summary": {
-    "overall_strategy": "staged modeling workflow",
-    "reason": "Different subquestions require evaluation, prediction, and optimization in sequence.",
-    "implementation_priority": [
-      "build baseline models first",
-      "validate main models",
-      "add improvements only if time and data allow"
-    ]
-  },
-  "subproblem_methods": [
-    {
-      "id": "Q1",
-      "problem_type": "evaluation",
-      "candidate_schemes": [
-        {
-          "scheme_id": "Q1-S1",
-          "name": "weighted scoring route",
-          "core_methods": [
-            "normalization",
-            "weighted scoring"
-          ],
-          "strengths": [
-            "simple",
-            "easy to explain"
-          ],
-          "weaknesses": [
-            "sensitive to weight design"
-          ]
-        },
-        {
-          "scheme_id": "Q1-S2",
-          "name": "TOPSIS route",
-          "core_methods": [
-            "entropy weighting",
-            "TOPSIS"
-          ],
-          "strengths": [
-            "fits multi-indicator ranking",
-            "clear score output"
-          ],
-          "weaknesses": [
-            "indicator direction and normalization must be handled carefully"
-          ]
-        }
-      ],
-      "recommended_scheme_id": "Q1-S2",
-      "required_output": [
-        "score",
-        "ranking",
-        "interpretation"
-      ],
-      "baseline_model": {
-        "name": "equal-weight scoring",
-        "role": "provide a transparent reference ranking",
-        "required_data": [
-          "normalized indicators"
-        ],
-        "expected_output": [
-          "baseline score table",
-          "baseline ranking"
-        ],
-        "limitations": [
-          "does not distinguish indicator importance"
-        ]
-      },
-      "main_model": {
-        "name": "entropy-weight TOPSIS",
-        "role": "produce an objective weighted multi-indicator ranking",
-        "selection_reason": [
-          "matches evaluation task",
-          "works with tabular indicator data",
-          "more explainable than black-box scoring"
-        ],
-        "required_data": [
-          "indicator matrix",
-          "positive or negative direction for each indicator"
-        ],
-        "expected_output": [
-          "indicator weights",
-          "relative closeness scores",
-          "final ranking"
-        ],
-        "validation_need": [
-          "weight sensitivity check",
-          "ranking stability check"
-        ]
-      },
-      "improved_model": {
-        "name": "PCA-assisted evaluation comparison",
-        "role": "check whether dimensionality reduction changes the ranking materially",
-        "condition": "use only if indicators are highly correlated",
-        "risk": "reduced interpretability"
-      },
-      "rejected_methods": [
-        {
-          "name": "deep neural network scoring",
-          "reason": "insufficient labeled data and weak interpretability"
-        }
-      ],
-      "expected_figures_tables": [
-        "indicator direction table",
-        "weight table",
-        "ranking table",
-        "sensitivity plot"
-      ],
-      "implementation_difficulty": "medium"
-    }
-  ],
-  "dependency_plan": [
-    {
-      "from": "Q1",
-      "to": "Q2",
-      "artifact_needed": "Q1 scores may be used as explanatory variables for Q2"
-    }
-  ],
-  "data_requirements": [
-    {
-      "subquestion": "Q1",
-      "required_data": [
-        "indicator matrix"
-      ],
-      "missing_data": [],
-      "data_risks": [
-        "mixed units",
-        "positive and negative indicators"
-      ]
-    }
-  ],
-  "validation_plan": [
-    "compare baseline and main model outputs",
-    "check whether results satisfy required output form",
-    "verify units and variable definitions"
-  ],
-  "robustness_plan": [
-    "parameter sensitivity",
-    "weight perturbation",
-    "ranking stability",
-    "baseline comparison"
-  ],
-  "rejected_methods": [
-    {
-      "method": "black-box neural model",
-      "reason": "not enough labeled data or interpretability support"
-    }
-  ],
-  "implementation_notes": [
-    "Generate code only after data auditing confirms the required fields."
-  ],
-  "recommended_next_skill": "data-auditor-cleaner"
-}
+```markdown
+# Qx Method Candidate Pool
+
+## 1. Subquestion Summary
+- **Goal**: [from problem parse]
+- **Problem type**: [from classifier]
+- **Required output**: [what must be delivered]
+- **Input data available**: [data inventory relevant to this subquestion]
+- **Dependencies**: [which subquestions this one depends on]
+- **Constraints**: [key constraints affecting method choice]
+
+## 2. Candidate Method Pool
+
+### Candidate M1: [Short Descriptive Name]
+
+- **Math idea**: [2-3 sentences explaining the core mathematical approach]
+- **Why it fits this subquestion**: [1-2 sentences]
+- **Strengths**:
+  - [strength 1]
+  - [strength 2]
+- **Weaknesses**:
+  - [weakness 1]
+  - [weakness 2]
+- **Expected programmer outputs**:
+  - Result files: [list expected output files]
+  - Figures: [list expected figures]
+  - Metrics: [list expected metrics]
+- **Evaluation criteria**: [how to judge if this method worked well]
+- **Implementation difficulty**: easy / medium / hard
+- **First-round priority**: high / medium / low
+- **Data requirements**: [specific data fields needed]
+- **Literature support**: [reference to paper analysis if applicable, or "no direct literature support"]
+- **Estimated implementation time**: [rough estimate: hours]
+
+### Candidate M2: [Short Descriptive Name]
+[Same structure]
+
+### Candidate M3: [Short Descriptive Name]
+[Same structure]
+
+### Candidate M4: [Short Descriptive Name] (if applicable)
+[Same structure]
+
+## 3. Rejected Methods
+
+| Method | Reason for Rejection |
+|--------|---------------------|
+| [method name] | [specific data-driven, time-driven, or interpretability-driven reason] |
+
+## 4. Baseline Designation
+
+- **Baseline**: [which candidate serves as baseline]
+- **Why this baseline**: [reason — simplest, most transparent, easiest to implement]
+
+## 5. First-Round Execution Recommendation
+
+- **Implement first**: [1-2 method names]
+- **Reason**: [why these should be tried first]
+- **When to try others**: [conditions under which remaining candidates should be tested]
+- **What to look for in round 1**: [what the modeler should check in the experiment report]
+
+## 6. Cross-Method Comparison Matrix
+
+| Criterion | M1 | M2 | M3 | M4 |
+|-----------|---|---|---|---|
+| Interpretability | [rating] | [rating] | [rating] | [rating] |
+| Data requirement satisfaction | [rating] | [rating] | [rating] | [rating] |
+| Implementation complexity | [rating] | [rating] | [rating] | [rating] |
+| Literature support | [rating] | [rating] | [rating] | [rating] |
+| Expected accuracy/fit | [rating] | [rating] | [rating] | [rating] |
+| Robustness potential | [rating] | [rating] | [rating] | [rating] |
+
+## 7. Handoff
+
+- **Next skill**: `model-code-analyzer`
+- **Required inputs for next skill**:
+  - This candidate pool document
+  - Cleaned data (after `data-auditor-cleaner`)
+  - Implementation target (python / matlab)
 ```
 
-Also produce one Markdown document per subquestion under `workspace/problem/method-selector/`.
+Also produce a `methods/method_pool_summary.md` if multiple subquestions are being planned:
 
-Each Markdown document should summarize:
+```markdown
+# Method Pool Summary (All Subquestions)
 
-- the subquestion goal
-- the 2-4 candidate schemes considered
-- strengths and weaknesses of each scheme
-- the recommended scheme for execution
-- baseline, main model, and optional improved model inside the recommended route
-- required data, expected artifacts, and validation notes
-
-# Model selection rules
-
-- Provide 2-4 candidate schemes for each subquestion when feasible.
-- Do not treat baseline, main model, and improved model as substitutes for multiple candidate schemes.
-- Recommend one execution route, but preserve the alternatives explicitly.
-- Every main model must have a baseline.
-- Every model must map to a specific subquestion.
-- Every model must produce the required output form.
-- Every model must state required data and expected artifacts.
-- Every model must include a validation or checking plan.
-- Prefer simple, explainable, contest-feasible methods over complex but fragile methods.
-- Improved models are optional and must address a specific weakness.
-- Reject methods that are unsupported by data, interpretability, time, or implementation constraints.
-- Do not recommend deep learning unless data size, task structure, and validation conditions justify it.
-- Do not choose a method only because it appears in an excellent paper.
-- Do not use a single method to answer unrelated subquestions poorly.
+| Subquestion | Type | # Candidates | Baseline | First-Round Priority | Rejected |
+|-------------|------|-------------|----------|---------------------|----------|
+| Q1 | evaluation | 3 | M1 (equal-weight) | M2, M1 | Deep learning (data insufficient) |
+| Q2 | prediction | 3 | M1 (moving average) | M2, M1 | LSTM (time series too short) |
+| Q3 | optimization | 2 | M1 (greedy) | M1, M2 | Genetic algorithm (overkill) |
+```
 
 # Method family guide
 
-Use this section to select method families. These are guidelines, not mandatory choices.
+Use this section to select candidate method families. These are guidelines, not mandatory choices.
 
 ## Evaluation
 
-Baseline options:
-
-- equal-weight scoring
-- simple normalized weighted sum
-- manual rubric with transparent weights
-
-Main model options:
-
+Candidate options:
+- equal-weight normalized scoring (always consider as baseline)
 - entropy-weight TOPSIS
-- AHP plus TOPSIS
-- PCA-assisted comprehensive evaluation
+- AHP + TOPSIS (if subjective weights are justifiable)
+- PCA-assisted comprehensive evaluation (if indicators are highly correlated)
 - grey relational analysis
 - fuzzy comprehensive evaluation
-- RSR or rank-based evaluation
+- RSR (rank sum ratio) evaluation
 
-Use when:
+Use when: output is score, ranking, grade, risk level, priority, or comparison.
 
-- the output is score, ranking, grade, risk level, priority, or comparison.
+Check: indicator justification, positive/negative direction, normalization, weight source, ranking stability.
 
-Check:
-
-- indicator justification
-- positive and negative indicator direction
-- normalization
-- weight source
-- ranking stability
-- sensitivity to weights
-
-Avoid:
-
-- arbitrary weights with no explanation
-- black-box scoring without labeled data
-- repeated indicators that double-count the same factor
+Avoid: arbitrary weights with no explanation, black-box scoring without labeled data, repeated indicators double-counting.
 
 ## Prediction
 
-Baseline options:
+Candidate options:
+- mean or last-value baseline (always consider)
+- linear regression (always consider as simple baseline)
+- ARIMA / SARIMA (for time series with clear temporal structure)
+- exponential smoothing
+- grey prediction GM(1,1) (for small-sample monotonic sequences)
+- random forest regression (for tabular nonlinear data)
+- gradient boosting (XGBoost/LightGBM, if justified)
+- ensemble (if multiple models are justified)
 
-- mean or last-value baseline
-- linear regression
-- simple moving average
-- naive seasonal baseline
+Use when: output is future value, trend, forecast interval, missing value estimate, or uncertainty estimate.
 
-Main model options:
+Check: train-test split or validation scheme, error metrics (MAE, RMSE, MAPE), residuals, extrapolation limits, feature leakage.
 
-- regression with feature engineering
-- ARIMA or other time series models
-- grey prediction for small-sample monotonic sequences
-- random forest or gradient boosting for tabular nonlinear prediction
-- ensemble prediction if multiple models are justified
-
-Use when:
-
-- the output is future value, trend, forecast interval, missing value estimate, or uncertainty estimate.
-
-Check:
-
-- train-test split or validation scheme
-- error metrics
-- residuals or failure cases
-- long-term extrapolation limits
-- feature leakage
-
-Avoid:
-
-- high-capacity models with tiny data
-- prediction without error metrics
-- claiming future accuracy from training fit alone
+Avoid: high-capacity models with tiny data, prediction without error metrics, claiming future accuracy from training fit alone, deep learning when data < 1000 samples.
 
 ## Optimization
 
-Baseline options:
+Candidate options:
+- greedy heuristic (always consider as baseline)
+- linear programming (for linear objectives and constraints)
+- integer programming (for discrete decisions)
+- nonlinear programming (for nonlinear objectives or constraints)
+- dynamic programming (for sequential decisions)
+- multi-objective optimization (for trade-off problems)
+- network flow / shortest path (for graph-based allocation)
+- simulated annealing or genetic algorithm (for hard combinatorial cases, use only if exact methods are infeasible)
 
-- greedy rule
-- exhaustive search for small cases
-- simple heuristic
-- current-policy comparison
+Use when: output is a decision plan, allocation, route, schedule, assignment, maximum, minimum, or feasible strategy.
 
-Main model options:
+Check: decision variables, state variables, parameters, objective function, constraints, feasibility, implementable final plan, sensitivity to weights or constraints.
 
-- linear programming
-- integer programming
-- nonlinear programming
-- dynamic programming
-- multi-objective optimization
-- network flow
-- shortest path or routing model
-- simulated annealing or genetic algorithm for hard combinatorial cases
-
-Use when:
-
-- the output is a decision plan, allocation, route, schedule, assignment, maximum, minimum, or feasible strategy.
-
-Check:
-
-- decision variables
-- state variables
-- parameters
-- objective function
-- constraints
-- feasibility
-- implementable final plan
-- sensitivity to weights or constraints
-
-Avoid:
-
-- objective functions with vague meaning
-- missing constraints
-- final result that gives only an optimal value but no plan
-- heuristics without baseline comparison
+Avoid: objective functions with vague meaning, missing constraints, final result that is only an optimal value without a plan, heuristics without baseline comparison.
 
 ## Mechanism
 
-Baseline options:
-
-- simplified algebraic relationship
-- discrete approximation
-- steady-state model
-- empirical fit to a known equation
-
-Main model options:
-
-- differential equations
-- difference equations
-- compartment models
+Candidate options:
+- simplified algebraic relationship (baseline)
+- differential equations (ODE/PDE)
+- difference equations (discrete time)
+- compartment models (SIR, SEIR, etc.)
 - conservation laws
-- physical or geometric constraints
 - system dynamics
-- mechanism plus parameter fitting
+- mechanism + parameter fitting (hybrid)
 
-Use when:
+Use when: output must explain a process, dynamic mechanism, physical relation, biological spread, flow, motion, growth, or decay.
 
-- the output must explain a process, dynamic mechanism, physical relation, biological spread, flow, motion, growth, or decay.
+Check: assumptions, units, parameter sources, validation against data or common sense, boundary conditions.
 
-Check:
+Avoid: equations with undefined variables, parameters with no source, mechanism claims unsupported by validation.
 
-- assumptions
-- units
-- parameter sources
-- validation against data or common sense
-- boundary conditions
+## Classification / Clustering
 
-Avoid:
-
-- equations with undefined variables
-- parameters with no source
-- mechanism claims unsupported by validation
-
-## Classification or clustering
-
-Baseline options:
-
-- rule-based classification
-- k-means with simple features
-- majority-class baseline
-- threshold rule
-
-Main model options:
-
+Candidate options:
+- rule-based classification (baseline)
+- k-means (baseline clustering)
 - decision tree
 - logistic regression
 - random forest
 - SVM
-- clustering with validation index
-- anomaly detection
+- clustering with validation index (silhouette, Davies-Bouldin)
+- anomaly detection (isolation forest, LOF)
 
-Use when:
+Use when: output is class label, cluster, segment, group, or anomaly.
 
-- the output is class label, cluster, segment, group, or anomaly.
+Check: feature scaling, class balance, validation metric, cluster number selection, interpretability.
 
-Check:
+Avoid: arbitrary cluster counts, classification without labels, accuracy-only reporting under class imbalance.
 
-- feature scaling
-- class balance
-- validation metric
-- cluster number selection
-- interpretability
+## Graph / Routing
 
-Avoid:
+Candidate options:
+- direct distance rule (baseline)
+- greedy nearest-neighbor (baseline)
+- Dijkstra shortest path
+- A* search
+- minimum spanning tree (Prim/Kruskal)
+- max flow / min cut
+- Hungarian algorithm (matching)
+- vehicle routing heuristics (Clarke-Wright, sweep)
+- TSP/VRP exact or heuristic
 
-- arbitrary cluster counts
-- classification without labels
-- accuracy-only reporting under class imbalance
+Use when: problem involves nodes, edges, paths, networks, flows, routes, matching, or connectivity.
 
-## Graph or routing
+Check: graph abstraction, edge weights, node definitions, feasibility constraints, static vs dynamic assumptions.
 
-Baseline options:
-
-- direct distance rule
-- greedy nearest-neighbor route
-- simple connectivity analysis
-
-Main model options:
-
-- shortest path
-- minimum spanning tree
-- network flow
-- matching
-- graph centrality
-- vehicle routing
-- graph search
-
-Use when:
-
-- the problem involves nodes, edges, paths, networks, flows, routes, matching, or connectivity.
-
-Check:
-
-- graph abstraction
-- edge weights
-- node definitions
-- feasibility constraints
-- static vs dynamic assumptions
-
-Avoid:
-
-- graph models that ignore real constraints
-- unjustified edge weights
-- routes that are mathematically valid but practically infeasible
+Avoid: graph models that ignore real constraints, unjustified edge weights, routes that are mathematically valid but practically infeasible.
 
 ## Simulation
 
-Baseline options:
-
-- deterministic scenario comparison
-- small manual scenario table
-- simplified expected-value calculation
-
-Main model options:
-
+Candidate options:
+- deterministic scenario comparison (baseline)
 - Monte Carlo simulation
 - discrete-event simulation
 - agent-based simulation
 - stochastic process modeling
 - scenario analysis
 
-Use when:
+Use when: output is a stochastic distribution, scenario result, repeated process outcome, or policy comparison under uncertainty.
 
-- the output is a stochastic distribution, scenario result, repeated process outcome, or policy comparison under uncertainty.
+Check: random seed, number of trials, parameter distributions, confidence intervals or summary statistics, scenario assumptions.
 
-Check:
+Avoid: simulation without statistical summary, hidden random assumptions, too few trials, unverifiable scenario generation.
 
-- random seed
-- number of trials
-- parameter distributions
-- confidence intervals or summary statistics
-- scenario assumptions
+## Data Analysis
 
-Avoid:
-
-- simulation without statistical summary
-- hidden random assumptions
-- too few trials
-- unverifiable scenario generation
-
-## Data analysis
-
-Baseline options:
-
-- descriptive statistics
-- simple correlation table
-- distribution summary
-
-Main model options:
-
+Candidate options:
+- descriptive statistics (baseline)
 - correlation analysis
 - hypothesis testing
 - factor analysis
@@ -588,37 +361,26 @@ Main model options:
 - regression explanation
 - exploratory visualization
 
-Use when:
+Use when: output is pattern discovery, factor identification, descriptive insight, or relationship analysis.
 
-- the output is pattern discovery, factor identification, descriptive insight, or relationship analysis.
+Check: correlation vs causation, data quality, unit consistency, figure relevance, connection to later modeling steps.
 
-Check:
-
-- correlation vs causation
-- data quality
-- unit consistency
-- figure relevance
-- connection to later modeling steps
-
-Avoid:
-
-- decorative figures without modeling purpose
-- causal claims from correlation alone
-- analysis that does not feed any subquestion
+Avoid: decorative figures without modeling purpose, causal claims from correlation alone, analysis not feeding any subquestion.
 
 # Rules
 
+- Generate 2-4 candidate methods per subquestion. If only 1 is feasible, explain why and flag the risk.
+- Each candidate must have a distinct mathematical idea — not just a different library or parameter.
+- Every subquestion must have a baseline candidate designated.
+- Every candidate must specify what the programmer should output and how to evaluate it.
+- Unsuitable methods must be explicitly rejected with reasons.
+- First-round priority must be stated — the team should know what to implement first.
+- Do not select the final method. This is the candidate pool, not the final choice.
+- Final method selection happens AFTER experiments, by the modeler reviewing experiment reports.
 - Do not generate code.
 - Do not clean data.
 - Do not write paper text.
 - Do not fabricate data, metrics, or results.
-- Do not choose final methods without considering data availability.
-- Do not skip baselines.
-- Do not overfit the method plan to a famous excellent paper.
-- Do not recommend a complex method unless it has a clear role.
-- Do not ignore implementation time and team capability.
-- Do not ignore robustness or sensitivity requirements.
-- Mark optional methods as optional.
 - Mark high-risk methods as high-risk.
 - Preserve uncertainty inherited from previous stages.
 
@@ -626,18 +388,13 @@ Avoid:
 
 Before handing off, verify:
 
-- Every subquestion has 2-4 candidate schemes or an explicit reason why fewer are defensible.
-- Every subquestion has one recommended execution route.
-- Every subquestion has a baseline model.
-- Every subquestion has a main model.
-- Improved models are justified or explicitly omitted.
-- Model choices match problem type, required output, and data conditions.
-- Required input data is listed for each model.
-- Expected outputs, tables, and figures are listed.
-- Validation checks are defined.
-- Robustness or sensitivity checks are defined.
-- Rejected methods are explained.
-- The next skill is appropriate, usually `data-auditor-cleaner`.
+- Every subquestion has 2-4 candidate methods or an explicit justification for fewer.
+- Every subquestion has a baseline designated.
+- Every candidate has: math idea, strengths, weaknesses, expected outputs, evaluation criteria, difficulty, priority.
+- Unsuitable methods are explicitly listed and rejected with reasons.
+- First-round execution recommendation is clear.
+- Cross-method comparison matrix is filled for all criteria.
+- The next skill is `data-auditor-cleaner` (or `workflow-orchestrator` if data is not needed).
 
 # Failure modes
 
@@ -646,226 +403,205 @@ Stop and report a blocker if:
 - No validated problem classification exists.
 - Required outputs are unknown.
 - Data availability is too unclear to select feasible methods.
-- The user requests code generation before a method plan exists.
-- Multiple method choices would lead to materially different workflows and the tradeoff cannot be resolved from available information.
 - The only plausible methods require data that is unavailable or forbidden by contest rules.
+- A subquestion's output requirements are so vague that no method can be meaningfully proposed.
 
 # Stop conditions
 
 This skill must stop instead of guessing when:
 
-- Selecting a model would require inventing data fields, labels, constraints, or evaluation metrics.
+- Selecting a method would require inventing data fields, labels, constraints, or evaluation metrics.
 - A subquestion cannot be linked to a required output.
-- A model choice depends on an unavailable attachment.
-- The user asks for final numerical results, code, or paper text before method planning is complete.
+- A method choice depends on an unavailable attachment.
+- The user asks for final numerical results, code, or paper text before the candidate pool is complete.
 
 When stopping, output:
 
 - the blocker
 - why it matters
-- safe partial method choices if any
+- safe partial candidate pools if any
 - missing information needed
 - recommended next action
 
 # Handoff
 
-After producing a validated method plan, hand off to:
+After producing the candidate method pool, hand off to:
 
 `data-auditor-cleaner`
+— to prepare data for the methods in the pool.
 
 The handoff should include:
 
-- candidate schemes
-- recommended scheme for each subquestion
-- method plan
-- required data fields
-- expected cleaned data outputs
-- expected result tables
-- expected figures
-- validation checks
-- robustness checks
-- rejected methods and reasons
-- implementation notes
+- Candidate method pool files (per subquestion).
+- Required data fields per method.
+- Baseline designations.
+- First-round execution recommendations.
+- Implementation difficulty notes.
 
-If no external or tabular data is needed and the method plan is fully specified, the workflow owner may route next to `model-code-analyzer`, but only after confirming that data requirements are satisfied.
+If no external or tabular data is needed, the workflow owner may route next to `model-code-analyzer`.
 
 # Examples
 
-## Example 1: Evaluation problem
+## Example 1: Evaluation problem candidate pool
 
 Input state:
-
-- Q1 is classified as `evaluation`.
-- Output required: ranking of several alternatives.
+- Q1: evaluate and rank cities by resilience.
+- Problem type: evaluation.
 - Data: multiple indicators with mixed units.
+- Literature: TOPSIS and entropy weighting commonly used in similar evaluation problems.
 
-Output:
+Output (`methods/Q1/q1_method_candidates.md`):
 
-```json
-{
-  "subproblem_methods": [
-    {
-      "id": "Q1",
-      "problem_type": "evaluation",
-      "candidate_schemes": [
-        {
-          "scheme_id": "Q1-S1",
-          "name": "equal-weight scoring route"
-        },
-        {
-          "scheme_id": "Q1-S2",
-          "name": "entropy-weight TOPSIS route"
-        }
-      ],
-      "recommended_scheme_id": "Q1-S2",
-      "baseline_model": {
-        "name": "equal-weight normalized scoring",
-        "role": "transparent baseline ranking"
-      },
-      "main_model": {
-        "name": "entropy-weight TOPSIS",
-        "selection_reason": [
-          "fits multi-indicator evaluation",
-          "handles objective weighting",
-          "produces comparable scores and ranking"
-        ]
-      },
-      "improved_model": {
-        "name": "weight perturbation stability analysis",
-        "role": "not a new scoring model, but a robustness improvement"
-      },
-      "expected_figures_tables": [
-        "indicator direction table",
-        "weight table",
-        "ranking table",
-        "ranking sensitivity plot"
-      ],
-      "recommended_next_skill": "data-auditor-cleaner"
-    }
-  ]
-}
+```markdown
+# Q1 Method Candidate Pool
+
+## 2. Candidate Method Pool
+
+### Candidate M1: Equal-Weight Normalized Scoring
+
+- **Math idea**: Normalize all indicators to [0,1] range (with direction handling), then compute a weighted sum with equal weights. Rank cities by total score descending.
+- **Why it fits**: Simplest possible multi-indicator evaluation; transparent and easy to explain.
+- **Strengths**:
+  - No weight justification needed (all indicators treated equally)
+  - Trivial to implement and verify
+  - Serves as baseline for all other methods
+- **Weaknesses**:
+  - Cannot distinguish indicator importance
+  - May overweight redundant indicators
+- **Expected programmer outputs**:
+  - Result files: `equal_weight_scores.csv`, `equal_weight_ranking.csv`
+  - Figures: `indicator_distribution.png`, `score_bar_chart.png`
+  - Metrics: score variance, ranking list
+- **Evaluation criteria**: Ranking interpretability, score differentiation
+- **Implementation difficulty**: easy
+- **First-round priority**: high (baseline — always implement first)
+- **Data requirements**: indicator matrix (all columns)
+- **Estimated implementation time**: 0.5 hours
+
+### Candidate M2: Entropy-Weight TOPSIS
+
+- **Math idea**: Use information entropy of each indicator to compute objective weights (higher dispersion → higher weight). Then apply TOPSIS: find ideal best/worst virtual alternatives, compute each city's relative closeness to the ideal best, rank by closeness.
+- **Why it fits**: Entropy provides objective data-driven weights (no subjective input needed). TOPSIS produces clear comparable scores. Widely used in mathematical modeling contests.
+- **Strengths**:
+  - Objective weights (no subjective bias)
+  - Well-established in contest literature
+  - Produces differentiable scores
+- **Weaknesses**:
+  - Entropy may overweight high-variance indicators that are not practically important
+  - Sensitive to normalization method choice
+- **Expected programmer outputs**:
+  - Result files: `entropy_weights.csv`, `topsis_scores.csv`, `topsis_ranking.csv`
+  - Figures: `weight_bar_chart.png`, `score_distribution.png`, `ranking_comparison.png` (vs baseline)
+  - Metrics: weight values, relative closeness scores, ranking stability
+- **Evaluation criteria**: Weight interpretability, ranking differentiation vs baseline, top-K stability
+- **Implementation difficulty**: medium
+- **First-round priority**: high (recommended main method)
+- **Data requirements**: indicator matrix (all columns), indicator direction (positive/negative)
+- **Estimated implementation time**: 2 hours
+
+### Candidate M3: PCA-Assisted Evaluation
+
+- **Math idea**: Apply PCA to reduce correlated indicators to independent principal components. Use component scores (weighted by explained variance) as composite evaluation scores.
+- **Why it fits**: Handles indicator correlation automatically. Reduces dimensionality if many indicators exist.
+- **Strengths**:
+  - Handles multicollinearity well
+  - Automatic dimensionality reduction
+- **Weaknesses**:
+  - Reduced interpretability (principal components are linear combinations)
+  - May lose information from small-variance components that are practically important
+  - Harder to explain to readers
+- **Expected programmer outputs**:
+  - Result files: `pca_loadings.csv`, `pca_scores.csv`, `pca_ranking.csv`
+  - Figures: `scree_plot.png`, `biplot.png`, `pca_score_plot.png`
+  - Metrics: explained variance ratio, component loadings, ranking vs TOPSIS comparison
+- **Evaluation criteria**: Information retention (explained variance), consistency with M2 ranking
+- **Implementation difficulty**: medium
+- **First-round priority**: medium (try if M1/M2 results need validation)
+- **Data requirements**: indicator matrix (all numeric columns)
+- **Estimated implementation time**: 1.5 hours
+
+## 3. Rejected Methods
+
+| Method | Reason for Rejection |
+|--------|---------------------|
+| AHP + TOPSIS | Requires subjective pairwise comparison matrix; cannot be objectively justified without domain expert input |
+| Deep neural network scoring | Insufficient labeled data; no ground-truth scores for training; weak interpretability |
+| Fuzzy comprehensive evaluation | Membership function design is arbitrary without domain knowledge; similar to weighted scoring with extra complexity |
+
+## 4. Baseline Designation
+
+- **Baseline**: M1 (Equal-Weight Normalized Scoring)
+- **Why**: Simplest transparent reference; any improvement over equal weights must be demonstrated
+
+## 5. First-Round Execution Recommendation
+
+- **Implement first**: M1 and M2
+- **Reason**: M1 establishes the baseline; M2 is the recommended main method. M3 is a validation backup.
+- **When to try M3**: If M2 ranking is suspicious (dominated by one or two high-variance indicators) or if indicators are highly correlated
+- **What to look for in round 1**: Does M2 produce meaningfully different weights? Does the ranking differ from M1? Is the ranking stable?
+
+## 6. Cross-Method Comparison Matrix
+
+| Criterion | M1 Equal-Weight | M2 Entropy-TOPSIS | M3 PCA |
+|-----------|---|---|---|
+| Interpretability | ★★★★★ | ★★★★☆ | ★★★☆☆ |
+| Data requirement satisfaction | ★★★★★ | ★★★★★ | ★★★★★ |
+| Implementation complexity | ★★★★★ | ★★★☆☆ | ★★★☆☆ |
+| Literature support | ★★★☆☆ | ★★★★★ | ★★★☆☆ |
+| Expected differentiation | ★★☆☆☆ | ★★★★☆ | ★★★★☆ |
+| Robustness potential | ★★★★★ | ★★★★☆ | ★★★☆☆ |
 ```
 
-## Example 2: Prediction problem
+## Example 2: Prediction problem candidate pool
 
 Input state:
+- Q2: predict future demand.
+- Problem type: prediction.
+- Data: historical time series, 36 months.
+- Literature: ARIMA and grey prediction common for short series.
 
-- Q2 is classified as `prediction`.
-- Output required: future demand values.
-- Data: historical time series with limited length.
+Output (summary):
+```markdown
+### Candidate M1: Moving Average Baseline
+- Math idea: Forecast = average of last K observations.
+- Baseline: Yes.
+- First-round priority: high.
 
-Output:
+### Candidate M2: ARIMA
+- Math idea: Model time series as autoregressive integrated moving average process; fit order via AIC; forecast with confidence intervals.
+- First-round priority: high.
 
-```json
-{
-  "subproblem_methods": [
-    {
-      "id": "Q2",
-      "problem_type": "prediction",
-      "candidate_schemes": [
-        {
-          "scheme_id": "Q2-S1",
-          "name": "moving-average route"
-        },
-        {
-          "scheme_id": "Q2-S2",
-          "name": "ARIMA route"
-        },
-        {
-          "scheme_id": "Q2-S3",
-          "name": "feature-augmented regression route"
-        }
-      ],
-      "recommended_scheme_id": "Q2-S2",
-      "baseline_model": {
-        "name": "last-value or moving-average baseline",
-        "role": "simple reference forecast"
-      },
-      "main_model": {
-        "name": "ARIMA or exponential smoothing",
-        "selection_reason": [
-          "fits short historical time series",
-          "more explainable than deep learning",
-          "supports forecast error analysis"
-        ]
-      },
-      "improved_model": {
-        "name": "feature-augmented regression",
-        "condition": "use only if reliable explanatory variables exist"
-      },
-      "rejected_methods": [
-        {
-          "name": "BiLSTM",
-          "reason": "data length is likely insufficient and implementation risk is high"
-        }
-      ],
-      "validation_plan": [
-        "train-test split",
-        "MAE or RMSE",
-        "residual check"
-      ],
-      "recommended_next_skill": "data-auditor-cleaner"
-    }
-  ]
-}
+### Candidate M3: Grey Prediction GM(1,1)
+- Math idea: Accumulate data to reduce noise, fit first-order differential equation, inverse-accumulate to get predictions.
+- First-round priority: medium (especially useful if data is short and monotonic).
+
+### Rejected:
+| LSTM | Data length (36 points) is insufficient for deep learning; high implementation risk |
+
+### Baseline: M1 (Moving Average)
 ```
 
-## Example 3: Optimization problem
+## Example 3: Optimization problem candidate pool
 
 Input state:
+- Q3: allocate limited resources to demand points.
+- Problem type: optimization.
+- Data: demand estimates, resource capacity, cost parameters.
 
-- Q3 is classified as `optimization`.
-- Output required: allocation plan under limited resources.
-- Data: resource limits and demand estimates.
+Output (summary):
+```markdown
+### Candidate M1: Greedy Allocation (Baseline)
+- Math idea: Sort demand points by priority, allocate resources greedily from highest to lowest until capacity exhausted.
+- Baseline: Yes.
 
-Output:
+### Candidate M2: Integer Linear Programming
+- Math idea: Define binary allocation variables, minimize total cost subject to capacity and demand constraints, solve with branch-and-bound.
 
-```json
-{
-  "subproblem_methods": [
-    {
-      "id": "Q3",
-      "problem_type": "optimization",
-      "candidate_schemes": [
-        {
-          "scheme_id": "Q3-S1",
-          "name": "greedy allocation route"
-        },
-        {
-          "scheme_id": "Q3-S2",
-          "name": "integer linear programming route"
-        },
-        {
-          "scheme_id": "Q3-S3",
-          "name": "multi-objective optimization route"
-        }
-      ],
-      "recommended_scheme_id": "Q3-S2",
-      "baseline_model": {
-        "name": "greedy allocation by demand priority",
-        "role": "simple feasible reference plan"
-      },
-      "main_model": {
-        "name": "integer linear programming",
-        "selection_reason": [
-          "decision variables are discrete",
-          "constraints can be written explicitly",
-          "final output must be an implementable allocation plan"
-        ]
-      },
-      "improved_model": {
-        "name": "multi-objective weighted optimization",
-        "condition": "use if fairness, cost, and efficiency must be balanced"
-      },
-      "expected_artifacts": [
-        "decision variable table",
-        "objective function definition",
-        "constraint list",
-        "optimal allocation table",
-        "sensitivity analysis on weights or resource limits"
-      ],
-      "recommended_next_skill": "data-auditor-cleaner"
-    }
-  ]
-}
+### Candidate M3: Multi-Objective Optimization
+- Math idea: Extend M2 with additional objectives (fairness, coverage) using weighted sum or epsilon-constraint method.
+
+### Rejected:
+| Genetic Algorithm | Overkill; problem size is manageable with exact methods; GA adds randomness and reduces reproducibility |
+
+### Baseline: M1 (Greedy Allocation)
 ```

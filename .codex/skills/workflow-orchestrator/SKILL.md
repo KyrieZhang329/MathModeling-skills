@@ -8,7 +8,9 @@ license: MIT
 
 Coordinate the full mathematical modeling contest workflow from problem intake to final QA.
 
-This skill does not solve models, write code, generate figures, or draft paper sections directly. Its role is to inspect the current project state, identify missing or blocked artifacts, enforce workflow gates, and decide the next appropriate skill to use.
+This skill does not solve models, write code, generate figures, or draft paper sections directly. Its role is to inspect the current project state across ALL subquestions, track per-question progress through a defined state machine, identify missing or blocked artifacts, enforce workflow gates (including the three critical rules), and decide the next appropriate skill to use.
+
+This skill is the single source of truth for "what should we do next?"
 
 # When to use
 
@@ -16,9 +18,11 @@ Use this skill:
 
 - At the beginning of a new mathematical modeling contest task.
 - After any major artifact is created, updated, or reviewed.
-- When the user is unsure what to do next.
+- When the user is unsure what to do next or asks "what's the status?"
+- When the user asks specific status questions: "is Q1 ready for the writer?", "what's blocking Q3?", "which question can be handed to the paper writer?", "who should work on what?"
 - Before generating code, writing paper text, assembling the final paper, or submitting results.
 - When the workflow appears inconsistent, incomplete, or out of order.
+- When a subquestion needs to be returned to the modeler for method revision.
 
 # Preconditions
 
@@ -37,72 +41,277 @@ If none of these exists, ask the user to provide the problem statement, workspac
 Inspect or request the following, depending on availability:
 
 - Problem statement or problem file location.
-- Current workspace tree.
+- Current workspace tree (all directories).
 - Existing artifacts under:
-  - `workspace/problem/`
-  - `workspace/data_raw/`
-  - `workspace/data_clean/`
-  - `workspace/scripts/`
-  - `workspace/results/`
-  - `workspace/figures/`
-  - `workspace/paper_sections/`
-  - `workspace/final_paper/`
-- Existing parsed problem, classification, related paper analysis, method plan, data report, model results, robustness report, figure plan, paper sections, or QA report.
-- User constraints, such as contest deadline, allowed tools, preferred language, or team role distribution.
+  - `planning/` — global plan, problem parse, classification, symbol table, model assumptions, question dependency.
+  - `methods/Q1/`, `methods/Q2/`, `methods/Q3/`, `methods/Q4/` — method candidates, iteration logs, final method explanations.
+  - `code/Q1/`, `code/Q2/`, `code/Q3/`, `code/Q4/` — generated scripts.
+  - `results/Q1/`, `results/Q2/`, `results/Q3/`, `results/Q4/` — experiment outputs, reports, final result analyses, solution packages.
+  - `robustness/Q1/`, `robustness/Q2/`, `robustness/Q3/`, `robustness/Q4/` — robustness reports.
+  - `paper/sections/` — drafted paper sections.
+  - `paper/figures/` — final paper figures.
+- Existing progress dashboard at `planning/progress_dashboard.md` (update if present).
+- User constraints such as contest deadline, allowed tools, preferred language, or team role distribution.
 
 # Workflow
 
-1. Inspect the current task state.
+1. Inspect the current task state ACROSS ALL SUBQUESTIONS.
+   - Check each subquestion's artifacts independently — different subquestions may be at different stages.
    - Identify available files, user-provided context, and completed artifacts.
    - Do not assume that a stage is complete only because a later file exists.
+   - Do not assume all subquestions are at the same stage.
 
-2. Map the task to the standard workflow stages:
-   - problem intake
-   - problem parsing
-   - problem classification
-   - related paper analysis
-   - method selection
-   - data auditing and cleaning
-   - model code generation
-   - code review
-   - robustness and sensitivity checking
-   - figure and table planning
-   - paper section writing
-   - quality assurance
-   - final assembly
+2. Determine each subquestion's status using the per-question state machine (see below).
 
 3. Enforce workflow gates.
-   - Do not allow method selection before problem parsing.
-   - Do not allow code generation before a validated method plan exists.
-   - Do not allow paper claims before model results exist.
-   - Do not allow final assembly before QA passes.
+   - Global gates (apply to all subquestions):
+     - Do not allow method selection before problem parsing and classification.
+     - Do not allow code generation before a validated method plan exists.
+     - Do not allow paper claims before model results exist.
+     - Do not allow final assembly before QA passes.
+   - Per-subquestion gates (the three critical rules):
+     - Rule 1: Do not allow paper writing for Qx before `methods/Qx/qx_final_method_explanation.md` exists.
+     - Rule 2: Do not allow writer handoff for Qx before `results/Qx/reports/qx_final_result_analysis.md` exists.
+     - Rule 3: The paper writer should use `results/Qx/reports/qx_solution_package_for_writer.md` as primary source; if missing, Qx is NOT Ready for Writer.
 
 4. Identify missing or blocked artifacts.
    - Mark missing files explicitly.
    - Mark blocked steps separately from merely incomplete steps.
    - If the blocker is user-side information, state exactly what is needed.
+   - Per-subquestion blocking reasons must be specific (e.g., "Q2 needs method revision because round 2 experiment report shows M2 constraint violation").
 
 5. Select the next skill.
    - Choose exactly one primary next skill.
    - Provide a short reason for the choice.
    - Provide concrete next actions for the user or agent.
+   - If multiple subquestions need work, prioritize by dependency order (Q1 before Q2 if Q2 depends on Q1).
 
-6. Return a workflow state report.
-   - Keep the report concise, structured, and actionable.
+6. Update or produce the progress dashboard.
+   - Save to `planning/progress_dashboard.md`.
+   - Keep it up to date with current subquestion statuses.
+
+7. Return a workflow state report.
+   - Include the progress dashboard.
+   - Include next skill recommendation.
    - Do not perform the downstream skill's work inside this skill.
+
+# Per-Question State Machine
+
+Each subquestion Qx moves through these states in order. The state is determined by which artifacts exist.
+
+```
+[01] Method Candidates Drafted
+      → methods/Qx/qx_method_candidates.md exists
+      ↓
+[02] Code Implementation In Progress
+      → code/Qx/ has scripts, experiment not yet run or running
+      ↓
+[03] Experiment Report Ready (Round N)
+      → results/Qx/experiments/roundN/qx_experiment_report_roundN.md exists
+      ↓  (may loop back to [01] or [02] if method revision needed)
+[04] Needs Method Revision
+      → experiment report indicates issues; loop back to modeler
+      ↓  (after revision, return to [02] or [03])
+[05] Final Method Selected
+      → modeler has confirmed final method choice
+      ↓
+[06] Final Method Explained
+      → methods/Qx/qx_final_method_explanation.md exists
+      ↓
+[07] Final Result Analyzed
+      → results/Qx/reports/qx_final_result_analysis.md exists
+      ↓
+[08] Solution Package Built
+      → results/Qx/reports/qx_solution_package_for_writer.md exists
+      ↓
+[09] Ready for Writer
+      → all [06], [07], [08] exist; writer can start
+      ↓
+[10] Writer Draft Ready
+      → paper/sections/qx.tex or equivalent exists
+      ↓
+[11] Reviewed by Modeler
+      → modeler confirms paper's model description matches final method
+      ↓
+[12] Reviewed by Programmer
+      → programmer confirms paper's results and figures match outputs
+      ↓
+[13] Finalized
+      → all reviews passed; ready for final assembly
+```
+
+The orchestrator determines which state each subquestion is in by checking which files exist and reading the latest experiment report verdicts.
+
+# Progress Dashboard
+
+Maintain this dashboard at `planning/progress_dashboard.md`.
+
+The dashboard MUST be a Markdown table tracking all subquestions:
+
+```markdown
+# Project Progress Dashboard
+
+> Last updated: [timestamp]
+
+## Overall Status
+
+| Stage | Q1 | Q2 | Q3 | Q4 |
+|-------|----|----|----|-----|
+| Method Candidates Drafted | ✅ | ✅ | ✅ | ❌ |
+| Experiment Report Ready | ✅ (R2) | ✅ (R1) | ❌ | ❌ |
+| Final Method Selected | ✅ | ❌ | ❌ | ❌ |
+| Final Method Explained | ✅ | ❌ | ❌ | ❌ |
+| Final Result Analyzed | ✅ | ❌ | ❌ | ❌ |
+| Solution Package Built | ⏳ | ❌ | ❌ | ❌ |
+| Ready for Writer | ⏳ | ❌ | ❌ | ❌ |
+| Writer Draft Ready | ❌ | ❌ | ❌ | ❌ |
+| Reviewed by Modeler | ❌ | ❌ | ❌ | ❌ |
+| Reviewed by Programmer | ❌ | ❌ | ❌ | ❌ |
+| **Finalized** | ❌ | ❌ | ❌ | ❌ |
+
+## Current Status Summary
+
+| Subquestion | Status | Blocked By | Next Action |
+|-------------|--------|------------|-------------|
+| Q1 | Solution Package in Progress | — | Run solution-package-builder |
+| Q2 | Needs Method Revision | M2 constraint violation in R1 | Modeler to fix constraints, then re-run |
+| Q3 | Not Started | Waiting on Q1 results (input dependency) | — |
+| Q4 | Not Started | Global planning incomplete | Run problem-parser and classifier first |
+
+## Blockers
+
+| Blocker | Affects | Severity | Resolution |
+|---------|---------|----------|------------|
+| Q2 M2 infeasible | Q2 finalization | High | Modeler revises constraint formulation |
+| Q4 not parsed | Q4 start | High | Run problem-parser for all subquestions |
+
+## Global Artifact Status
+
+| Artifact | Status | Path |
+|----------|--------|------|
+| Problem Parse | ✅ | planning/parse/ |
+| Problem Classification | ✅ | planning/classification/ |
+| Global Symbol Table | ✅ | planning/symbol_table.md |
+| Model Assumptions (Global) | ⏳ | planning/model_assumptions.md |
+| Question Dependency Map | ✅ | planning/question_dependency.md |
+| Related Paper Analysis | ✅ | workspace/papers/related_paper_analysis.md |
+| Data Report | ✅ | workspace/data/data_report.md |
+
+## Three Critical Rules Check
+
+| Rule | Q1 | Q2 | Q3 | Q4 |
+|------|----|----|----|-----|
+| 1: Final method explanation exists before paper writing | ✅ | ❌ | ❌ | ❌ |
+| 2: Final result analysis exists before writer handoff | ✅ | ❌ | ❌ | ❌ |
+| 3: Solution package exists as writer's primary source | ⏳ | ❌ | ❌ | ❌ |
+
+## Recommended Next Skill
+
+- **Skill**: `solution-package-builder` for Q1
+- **Reason**: Q1 has both final method explanation and final result analysis; solution package is the next prerequisite for writer handoff.
+- **Runners-up** (if Q1 is already assigned):
+  - `method-selector` for Q2 revision (after modeler fixes M2)
+  - `problem-parser` for Q4
+```
+
+# Expanded Workflow Stages (Global)
+
+The full global workflow now includes per-subquestion iteration loops:
+
+```
+【0】全题启动阶段 (Global Setup)
+problem-parser → problem-classifier → related-paper-analyzer
+    → global symbol table → global model assumptions → question dependency map
+    ↓
+【1】候选方法池阶段 (Per-Question Start)
+method-selector → methods/Qx/qx_method_candidates.md
+    ↓
+【2】编程实验阶段 (Per-Question, Multi-Round)
+model-code-analyzer → python/matlab-model-code-generator → code-reviewer
+    → results/Qx/experiments/roundN/
+    ↓
+【3】实验报告阶段 (Per-Question, Per-Round)
+result-report-generator → results/Qx/experiments/roundN/qx_experiment_report_roundN.md
+    ↓
+【4】方法迭代循环 (Per-Question Loop)
+    ← modeler reviews report → revises methods → back to 【2】
+    OR → proceed to 【5】
+    ↓
+【5】最终方法锁定
+final-method-explainer → methods/Qx/qx_final_method_explanation.md
+    ↓
+【6】最终结果分析
+result-report-generator (final mode) → results/Qx/reports/qx_final_result_analysis.md
+    ↓
+【7】稳健性分析
+robustness-checker → robustness/Qx/qx_robustness_report.md
+    ↓
+【8】论文材料包
+solution-package-builder → results/Qx/reports/qx_solution_package_for_writer.md
+    ↓
+【9】图表规划
+figure-table-planner → paper/figures/ planning
+    ↓
+【10】论文写作 (Per-Question)
+paper-section-writer → paper/sections/qx.tex
+    ↓
+【11】建模手审核 → 【12】编程手审核
+    ↓
+【13】全题QA
+quality-assurance-auditor → paper/qa_report.md
+    ↓
+【14】终稿组装
+Final assembly of main.tex + sections + figures → paper/final.pdf
+```
+
+# The Three Critical Rules (Enforced Here)
+
+These rules are the orchestrator's primary enforcement responsibility:
+
+## Rule 1: No final paper writing without final method explanation
+
+`paper-section-writer` MUST NOT write final paper sections for Qx based only on `qx_method_candidates.md` or early method plans. The orchestrator checks that `methods/Qx/qx_final_method_explanation.md` exists before routing Qx to the paper writer.
+
+If a user asks to write Qx paper but this file is missing, the orchestrator blocks and routes to `final-method-explainer` instead.
+
+## Rule 2: No writer handoff without final result analysis
+
+Program execution outputs alone are NOT sufficient for writer handoff. The orchestrator checks that `results/Qx/reports/qx_final_result_analysis.md` exists before marking Qx as Ready for Writer.
+
+If a user says "Qx is done, write the paper" but only raw results exist (no analysis report), the orchestrator blocks and routes to `result-report-generator` instead.
+
+## Rule 3: Writer reads from the solution package, not scattered results
+
+The paper writer's primary source for Qx is `results/Qx/reports/qx_solution_package_for_writer.md`. The orchestrator checks that this file exists before routing Qx to the paper writer.
+
+If it is missing, the orchestrator blocks and routes to `solution-package-builder`.
+
+# Status Query Responses
+
+The orchestrator should be able to answer these questions precisely:
+
+- **"Q1 现在卡在哪？"** → State the exact status (e.g., "Q1 is at state [08] Solution Package Built — waiting for solution-package-builder. It needs: nothing. It is blocked by: nothing.")
+- **"哪个小问可以交给论文手？"** → List subquestions at state [09] Ready for Writer (e.g., "None yet. Q1 is closest at [08] — one step away.")
+- **"哪个小问缺最终方法详解？"** → List subquestions at state [05] or earlier (e.g., "Q2, Q3, Q4 are missing final method explanations. Q2 is at [04] Needs Method Revision.")
+- **"哪个小问只有结果没有解释？"** → List subquestions with results but no analysis report (e.g., "Q3 has raw results in results/Q3/experiments/round1/ but no analysis report.")
+- **"哪个小问需要退回建模手？"** → List subquestions at state [04] Needs Method Revision (e.g., "Q2 needs method revision — M2 constraint violation.")
 
 # Outputs
 
 Produce a workflow state report containing:
 
-- `current_stage`
+- `current_global_stage`
+- `progress_dashboard` (link to or contents of `planning/progress_dashboard.md`)
+- `per_question_status` (state machine state for each Qx)
 - `completed_artifacts`
 - `missing_artifacts`
-- `blocked_items`
-- `workflow_gates`
+- `blocked_items` (global and per-question)
+- `workflow_gates` (global and per-question)
+- `three_critical_rules_check`
 - `next_skill`
 - `next_actions`
 - `handoff_context`
+- `runners_up` (alternative next skills if the primary is already in progress)
 
 # Output format
 
@@ -110,42 +319,115 @@ Prefer this JSON-compatible structure:
 
 ```json
 {
-  "current_stage": "problem_parsing",
-  "completed_artifacts": {
-    "problem_statement": true,
-    "problem_parse": false,
-    "problem_classification": false,
-    "related_paper_analysis": false,
-    "method_plan": false,
-    "data_report": false,
-    "cleaned_data": false,
-    "model_scripts": false,
-    "model_results": false,
-    "robustness_report": false,
-    "figure_plan": false,
-    "paper_sections": false,
-    "qa_report": false
+  "current_global_stage": "per_question_iteration",
+  "progress_dashboard_path": "planning/progress_dashboard.md",
+  "per_question_status": {
+    "Q1": {
+      "state": "08_solution_package_built",
+      "state_label": "Solution Package Built",
+      "ready_for_writer": false,
+      "blocked": false,
+      "blocked_reason": null,
+      "missing_for_next_state": [
+        "paper/sections/q1.tex"
+      ]
+    },
+    "Q2": {
+      "state": "04_needs_method_revision",
+      "state_label": "Needs Method Revision",
+      "ready_for_writer": false,
+      "blocked": true,
+      "blocked_reason": "Round 1 experiment shows M2 constraint violation. Modeler must revise constraint formulation.",
+      "missing_for_next_state": [
+        "Revised method from modeler"
+      ]
+    },
+    "Q4": {
+      "state": "00_not_started",
+      "state_label": "Not Started",
+      "ready_for_writer": false,
+      "blocked": false,
+      "blocked_reason": null,
+      "missing_for_next_state": [
+        "Problem parse (all subquestions)",
+        "Problem classification (all subquestions)",
+        "methods/Q4/q4_method_candidates.md"
+      ]
+    }
   },
-  "missing_artifacts": [
-    "workspace/problem/problem_parse.json"
+  "global_completed_artifacts": {
+    "problem_parse": true,
+    "problem_classification": true,
+    "related_paper_analysis": true,
+    "global_symbol_table": true,
+    "global_model_assumptions": false,
+    "question_dependency_map": true,
+    "data_report": true,
+    "cleaned_data": true
+  },
+  "per_question_completed_artifacts": {
+    "Q1": {
+      "method_candidates": true,
+      "method_iteration_log": true,
+      "experiment_report_round1": true,
+      "experiment_report_round2": true,
+      "final_method_explanation": true,
+      "final_result_analysis": true,
+      "solution_package": true,
+      "robustness_report": true,
+      "paper_draft": false,
+      "figure_table_plan": true
+    }
+  },
+  "blocked_items": [
+    {
+      "scope": "Q2",
+      "item": "final_method_explanation",
+      "reason": "Modeler has not confirmed final method. Round 1 experiment showed M2 constraint violation.",
+      "resolution": "Modeler revises constraint formulation, then re-run code for M2."
+    }
   ],
-  "blocked_items": [],
-  "workflow_gates": {
-    "method_selection_allowed": false,
-    "code_generation_allowed": false,
-    "paper_writing_allowed": false,
-    "final_assembly_allowed": false
+  "three_critical_rules_check": {
+    "Q1": {
+      "rule1_method_explanation_exists": true,
+      "rule2_result_analysis_exists": true,
+      "rule3_solution_package_exists": true,
+      "ready_for_writer": true
+    },
+    "Q2": {
+      "rule1_method_explanation_exists": false,
+      "rule2_result_analysis_exists": false,
+      "rule3_solution_package_exists": false,
+      "ready_for_writer": false
+    }
   },
-  "next_skill": "problem-parser",
+  "workflow_gates": {
+    "global": {
+      "method_selection_allowed": true,
+      "code_generation_allowed_Q1": true,
+      "code_generation_allowed_Q2": true,
+      "paper_writing_allowed_Q1": true,
+      "paper_writing_allowed_Q2": false,
+      "final_assembly_allowed": false
+    }
+  },
+  "next_skill": "paper-section-writer",
   "next_actions": [
-    "Parse the contest problem into goals, objects, constraints, data, outputs, and subquestions.",
-    "Save the parsed result under workspace/problem/."
+    "Write paper/sections/q1.tex using results/Q1/reports/q1_solution_package_for_writer.md as primary source.",
+    "Reference figures from results/Q1/experiments/final/figures/."
+  ],
+  "runners_up": [
+    {
+      "skill": "workflow-orchestrator",
+      "action": "Return Q2 to modeler for constraint revision."
+    }
   ],
   "handoff_context": {
-    "reason": "The problem has not been parsed yet, so classification and method selection are blocked.",
+    "reason": "Q1 is Ready for Writer (all three critical rules satisfied).",
     "required_inputs_for_next_skill": [
-      "problem statement",
-      "attachment descriptions if available"
+      "results/Q1/reports/q1_solution_package_for_writer.md",
+      "results/Q1/experiments/final/figures/",
+      "robustness/Q1/q1_robustness_report.md"
     ]
   }
 }
@@ -163,19 +445,26 @@ If a JSON block is too rigid for the situation, use a concise Markdown report wi
 - Do not infer completion without evidence.
 - Do not skip workflow gates for speed.
 - Do not approve final delivery without QA.
+- Enforce the three critical rules at every handoff.
+- Track per-question status separately — different subquestions are at different stages.
+- Update the progress dashboard whenever the state changes.
 - Keep recommendations tied to traceable artifacts.
 - Prefer one clear next step over many speculative branches.
+- If a subquestion is blocked, state exactly what needs to happen to unblock it.
+- If the modeler or programmer needs to act, be specific about what they need to do.
 
 # Verification
 
 Before handing off, verify:
 
-- The chosen `next_skill` matches the earliest incomplete required stage.
-- No workflow gate is bypassed.
+- The chosen `next_skill` matches the earliest incomplete required stage for the highest-priority subquestion.
+- No workflow gate is bypassed (global or per-question).
+- The three critical rules are checked for the target subquestion.
 - Missing artifacts are explicitly listed.
 - Blocked items are separated from ordinary incomplete items.
 - The next actions are concrete enough to execute.
 - The handoff context includes the minimum inputs needed by the next skill.
+- The progress dashboard reflects the current state (update if needed).
 
 # Failure modes
 
@@ -185,8 +474,12 @@ Stop and report a blocker if:
 - The user asks to generate code but no method plan exists.
 - The user asks to write numerical conclusions but no model results exist.
 - The user asks to assemble or submit the final paper before QA passes.
+- The user asks to write Qx paper but `qx_final_method_explanation.md` is missing (Rule 1).
+- The user asks to hand Qx to writer but `qx_final_result_analysis.md` is missing (Rule 2).
+- The user asks to write Qx paper but `qx_solution_package_for_writer.md` is missing and the package cannot be assembled from available artifacts (Rule 3).
 - The workspace state is inconsistent, such as paper claims existing without corresponding results.
 - Multiple incompatible interpretations of the current task exist and the choice affects workflow order.
+- A subquestion dependency is violated (e.g., Q2 code references Q1 results that don't exist).
 
 # Stop conditions
 
@@ -195,31 +488,40 @@ This skill must stop instead of guessing when:
 - Required artifacts cannot be located.
 - The current stage cannot be determined from available context.
 - A downstream skill would need fabricated data, fabricated results, or unsupported assumptions.
-- The user request conflicts with the workflow gates.
+- The user request conflicts with the workflow gates or the three critical rules.
+- The per-question state cannot be determined because artifacts are missing and the user cannot clarify.
 
 When stopping, output:
 
 - the blocker
 - why it matters
 - the minimum information or artifact needed to continue
+- which subquestion is affected
 - the recommended next skill once the blocker is resolved
 
 # Handoff
 
-Typical handoff order:
+Typical handoff order (global, then per-question):
 
 1. `problem-parser`
 2. `problem-classifier`
 3. `related-paper-analyzer`
-4. `method-selector`
-5. `data-auditor-cleaner`
-6. `model-code-generator`
-7. `code-reviewer`
-8. `robustness-checker`
-9. `figure-table-planner`
-10. `paper-section-writer`
-11. `quality-assurance-auditor`
-12. back to `workflow-orchestrator`
+4. **Create global symbol table, model assumptions, dependency map** (planning stage)
+5. `method-selector` (per Qx — can run in parallel for independent subquestions)
+6. `model-code-analyzer`
+7. `python-model-code-generator` or `matlab-model-code-generator`
+8. `code-reviewer`
+9. `result-report-generator` (round N experiment report)
+10. **Loop back to 5 or 6** if method revision needed
+11. `result-report-generator` (final result analysis, when method is locked)
+12. `final-method-explainer`
+13. `robustness-checker`
+14. `figure-table-planner`
+15. `solution-package-builder`
+16. `paper-section-writer`
+17. **Modeler review → Programmer review**
+18. `quality-assurance-auditor`
+19. Back to `workflow-orchestrator` for final assembly
 
 If the workflow is complete and QA has passed, hand off to final assembly or user review.
 
@@ -228,19 +530,17 @@ If the workflow is complete and QA has passed, hand off to final assembly or use
 ## Example 1: New contest problem
 
 Input state:
-
-- Problem PDF exists in `workspace/problem/`.
+- Problem PDF exists.
 - No parsed problem exists.
 
 Output:
-
 ```json
 {
-  "current_stage": "problem_parsing",
+  "current_global_stage": "global_setup",
   "next_skill": "problem-parser",
   "next_actions": [
     "Extract goals, objects, constraints, data, outputs, and subquestions.",
-    "Save the parsed artifact under workspace/problem/."
+    "Save parsed result under planning/parse/."
   ]
 }
 ```
@@ -248,46 +548,150 @@ Output:
 ## Example 2: User asks to generate code too early
 
 Input state:
-
 - Problem has been parsed.
 - Problem has not been classified.
 - Method plan does not exist.
 - User asks for modeling code.
 
 Output:
-
 ```json
 {
-  "current_stage": "problem_classification",
+  "current_global_stage": "global_setup",
   "blocked_items": [
     "Code generation is blocked because no validated method plan exists."
   ],
   "next_skill": "problem-classifier",
   "next_actions": [
     "Classify each subquestion before literature analysis and method selection.",
-    "Then hand off to related-paper-analyzer."
+    "Then hand off to related-paper-analyzer, then method-selector."
   ]
 }
 ```
 
-## Example 3: User asks to assemble final paper before QA
+## Example 3: Q1 is Ready for Writer
 
 Input state:
+- Q1: `methods/Q1/q1_final_method_explanation.md` exists.
+- Q1: `results/Q1/reports/q1_final_result_analysis.md` exists.
+- Q1: `results/Q1/reports/q1_solution_package_for_writer.md` exists.
+- User asks "what's next?"
 
-- Paper sections exist.
+Output:
+```json
+{
+  "per_question_status": {
+    "Q1": {
+      "state": "09_ready_for_writer",
+      "state_label": "Ready for Writer",
+      "ready_for_writer": true
+    }
+  },
+  "three_critical_rules_check": {
+    "Q1": {
+      "rule1_method_explanation_exists": true,
+      "rule2_result_analysis_exists": true,
+      "rule3_solution_package_exists": true,
+      "ready_for_writer": true
+    }
+  },
+  "next_skill": "paper-section-writer",
+  "next_actions": [
+    "Write paper/sections/q1.tex using results/Q1/reports/q1_solution_package_for_writer.md as primary source."
+  ],
+  "handoff_context": {
+    "reason": "Q1 satisfies all three critical rules. Writer can proceed with the solution package.",
+    "required_inputs_for_next_skill": [
+      "results/Q1/reports/q1_solution_package_for_writer.md"
+    ]
+  }
+}
+```
+
+## Example 4: Q2 needs method revision (Rule 1 violation)
+
+Input state:
+- Q2 has experiment report round 1.
+- Experiment report says M2 produces infeasible output.
+- User says "let's just write the Q2 paper anyway."
+
+Output:
+```json
+{
+  "blocked_items": [
+    "CRITICAL RULE 1 VIOLATION: Q2 paper writing is blocked because methods/Q2/q2_final_method_explanation.md does not exist. The experiment report indicates M2 is infeasible — the modeler must revise the method before a final method can be explained."
+  ],
+  "per_question_status": {
+    "Q2": {
+      "state": "04_needs_method_revision",
+      "state_label": "Needs Method Revision",
+      "ready_for_writer": false,
+      "blocked_reason": "M2 constraint violation in round 1. Modeler must fix constraint formulation or select a different candidate method."
+    }
+  },
+  "next_skill": "method-selector",
+  "next_actions": [
+    "Modeler: revise Q2 constraint formulation for M2, or select a different candidate method from the pool.",
+    "After revision: regenerate code and run round 2 experiments.",
+    "Do NOT start paper writing until final method is confirmed and explained."
+  ]
+}
+```
+
+## Example 5: User asks "which question can be handed to the paper writer?"
+
+Input state:
+- Q1: Solution package exists. Not yet drafted.
+- Q2: Final method explanation exists but no final result analysis.
+- Q3: Only method candidates drafted.
+- Q4: Not started.
+
+Output:
+```json
+{
+  "query_response": "Q1 is ready for the paper writer. Q2, Q3, Q4 are not ready.",
+  "ready_for_writer": ["Q1"],
+  "almost_ready": [],
+  "not_ready": {
+    "Q2": "Missing final result analysis (Rule 2). Programmer must run final experiments and produce results/Q2/reports/q2_final_result_analysis.md.",
+    "Q3": "Only at candidate method stage. Need experiments, method selection, method explanation, result analysis, and solution package.",
+    "Q4": "Not started — needs problem parsing and classification first."
+  },
+  "next_skill": "paper-section-writer",
+  "next_actions": [
+    "Write paper/sections/q1.tex for Q1 (only subquestion Ready for Writer).",
+    "Meanwhile: Q2 programmer should produce final result analysis."
+  ]
+}
+```
+
+## Example 6: User asks to assemble final paper before QA
+
+Input state:
+- Paper sections exist for all subquestions.
 - QA report does not exist.
 
 Output:
-
 ```json
 {
-  "current_stage": "quality_assurance",
+  "current_global_stage": "quality_assurance",
   "blocked_items": [
     "Final assembly is blocked because QA has not passed."
   ],
   "next_skill": "quality-assurance-auditor",
   "next_actions": [
-    "Audit problem coverage, model-result consistency, figure references, robustness checks, and unsupported claims."
+    "Audit problem coverage, model-result consistency, figure references, robustness checks, unsupported claims, and workflow completeness."
   ]
 }
 ```
+
+## Example 7: Progress dashboard update
+
+Input state:
+- After completing Q1 solution package, the orchestrator is invoked.
+
+Output:
+- Updated `planning/progress_dashboard.md` with:
+  - Q1 state changed to [08] Solution Package Built.
+  - Next recommended skill: `paper-section-writer` for Q1.
+  - Three critical rules check updated for Q1 (all three ✅).
+  - Q2, Q3, Q4 statuses unchanged.
