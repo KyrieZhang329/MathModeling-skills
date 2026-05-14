@@ -52,6 +52,10 @@
 | `robustness-checker` | 跑敏感性、误差、和 baseline 的对比 |
 | `figure-table-planner` | 规划真正需要的图表，明确每张图要说明什么 |
 | `paper-section-writer` | 只用已经存在的结果起草论文分节 |
+| `result-report-generator` | 根据实验结果生成多方法实验报告和最终结果分析 |
+| `final-method-explainer` | 帮助建模手将最终选定方法写成完整的数学建模说明 |
+| `solution-package-builder` | 整合建模手和编程手材料，生成给论文手的最终材料包 |
+| `math-figure-generator` | 使用 matplotlib 生成出版级质量的数学建模图表（评价图、预测图、优化图、热力图、多面板布局等） |
 | `quality-assurance-auditor` | 提交前最后一遍检查：前后矛盾、缺证据、引用不上的内容 |
 
 ## 标准流程
@@ -61,16 +65,19 @@ workflow-orchestrator
 → problem-parser
 → problem-classifier
 → related-paper-analyzer
-→ method-selector
+→ method-selector (候选方法池生成)
 → data-auditor-cleaner
-→ model-code-generator (router)
+→ model-code-analyzer (代码规划)
    ├── python-model-code-generator
    └── matlab-model-code-generator
 → code-reviewer (router)
    ├── python-code-reviewer
    └── matlab-code-reviewer
+→ result-report-generator (实验报告 + 最终结果分析)
 → robustness-checker
-→ figure-table-planner
+→ final-method-explainer (最终方法详解)
+→ figure-table-planner (图表规划)
+→ solution-package-builder (论文材料包)
 → paper-section-writer
 → quality-assurance-auditor
 → workflow-orchestrator
@@ -195,6 +202,15 @@ workspace/
 - 改进 `code-reviewer` 和 `robustness-checker` 之间的衔接，避免重复检查
 - 欢迎大家在 `docs/` 里写一些常见踩坑笔记（数据泄漏、baseline 偏移、图和结果对不上之类）
 - 兼容其他AI工具的使用
+
+## 致谢与参考
+
+本项目在设计和开发过程中参考了以下优秀项目：
+
+- **[nature-skills](https://github.com/Yuan1z0825/nature-skills)** — 一套面向 *Nature* 期刊标准学术产出的 Claude Code Skills 集合。本项目中的 `math-figure-generator` skill 借鉴了其 `nature-figure` skill 的图表合约（figure contract）、颜色体系、多面板信息架构和 SVG 优先导出等设计理念。nature-skills 由 [Yuan1z0825](https://github.com/Yuan1z0825) 及社区贡献者维护，基于 MIT 协议开源。
+- **[figures4papers](https://github.com/ChenLiu-1996/figures4papers)** — nature-skills 中 `nature-figure` 的生产级绘图脚本来源，发表于 *Nature Machine Intelligence* 及顶级 ML/生物信息学会议。
+
+感谢以上项目的作者和贡献者。
 
 ## License
 

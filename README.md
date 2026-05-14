@@ -52,6 +52,10 @@ The real problems in mathematical modeling contests often do not come from “no
 | `robustness-checker`        | Runs sensitivity analysis, error checks, and baseline comparisons. |
 | `figure-table-planner`      | Plans the figures and tables that are actually needed, and clarifies what each one should show. |
 | `paper-section-writer`      | Drafts paper sections using only existing results and validated artifacts. |
+| `result-report-generator` | Generates multi-method experiment reports and final result analysis from experiment outputs. |
+| `final-method-explainer` | Helps the modeler document the final selected method with complete mathematical specification. |
+| `solution-package-builder` | Integrates modeler and programmer outputs into a writer-facing solution package. |
+| `math-figure-generator` | Generates publication-quality mathematical modeling figures with matplotlib (evaluation, prediction, optimization, heatmaps, multi-panel layouts). |
 | `quality-assurance-auditor` | Performs the final check before submission, looking for inconsistencies, missing evidence, and unsupported claims. |
 
 ## Standard Workflow
@@ -61,16 +65,19 @@ workflow-orchestrator
 → problem-parser
 → problem-classifier
 → related-paper-analyzer
-→ method-selector
+→ method-selector (candidate pool generation)
 → data-auditor-cleaner
-→ model-code-generator (router)
+→ model-code-analyzer (code planning)
    ├── python-model-code-generator
    └── matlab-model-code-generator
 → code-reviewer (router)
    ├── python-code-reviewer
    └── matlab-code-reviewer
+→ result-report-generator (experiment reports + final result analysis)
 → robustness-checker
-→ figure-table-planner
+→ final-method-explainer (final method documentation)
+→ figure-table-planner (figure & table planning)
+→ solution-package-builder (writer solution package)
 → paper-section-writer
 → quality-assurance-auditor
 → workflow-orchestrator
@@ -197,6 +204,15 @@ If you run a full workflow and find something broken or awkward, feel free to op
 - Improve the handoff between `code-reviewer` and `robustness-checker` to reduce duplicated checks.
 - Welcome notes in `docs/` about common failure cases, such as data leakage, baseline drift, and figure-result mismatch.
 - Improve compatibility with other AI coding and writing tools.
+
+## Acknowledgments & References
+
+This project has drawn inspiration and design patterns from the following excellent work:
+
+- **[nature-skills](https://github.com/Yuan1z0825/nature-skills)** — A collection of Claude Code skills for producing academic work at *Nature*-journal standard. The `math-figure-generator` skill in this project adapts the `nature-figure` skill's philosophy of figure contracts, semantic color palettes, multi-panel information architecture, and SVG-first export policy. nature-skills is maintained by [Yuan1z0825](https://github.com/Yuan1z0825) and community contributors, released under the MIT License.
+- **[figures4papers](https://github.com/ChenLiu-1996/figures4papers)** — The production plotting scripts behind nature-skills' `nature-figure`, published in *Nature Machine Intelligence* and top ML/bioinformatics venues.
+
+Our thanks to the authors and contributors of these projects.
 
 ## License
 
