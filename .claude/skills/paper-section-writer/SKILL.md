@@ -8,7 +8,9 @@ license: MIT
 
 Write mathematical modeling paper sections from validated workflow artifacts.
 
-This skill turns problem analysis, method plans, data reports, model results, robustness checks, and figure-table plans into structured paper section drafts. It must keep every claim traceable to an artifact and must not invent data, numerical results, figures, references, or unsupported conclusions.
+This skill turns the final method explanation, final result analysis, solution package, and figure-table plan into structured paper section drafts. It must keep every claim traceable to an artifact and must not invent data, numerical results, figures, references, or unsupported conclusions.
+
+**CRITICAL**: This skill is gated. It MUST NOT write final paper sections for a subquestion unless all three prerequisites are met (see "Three Critical Rules" below). If prerequisites are missing, this skill must refuse and redirect to the appropriate upstream skill.
 
 This skill does not run models, generate new results, create unsupported figures, perform final QA, or approve final submission.
 
@@ -16,108 +18,163 @@ This skill does not run models, generate new results, create unsupported figures
 
 Use this skill:
 
-- After `figure-table-planner` has produced a validated figure and table plan.
-- After model results and robustness evidence exist.
+- After `solution-package-builder` has produced the solution package for a subquestion.
+- After `figure-table-planner` has produced the figure-table plan.
+- When all three critical rule prerequisites are met for the target subquestion.
 - When paper section drafts are needed.
 - When existing section drafts need to be aligned with validated artifacts.
 - Before `quality-assurance-auditor`.
 
+Do NOT use this skill:
+- To write final paper sections for Qx when `methods/Qx/qx_final_method_explanation.md` is missing.
+- To write final paper sections for Qx when `results/Qx/reports/qx_final_result_analysis.md` is missing.
+- To write final paper sections for Qx when `results/QX/reports/qx_solution_package_for_writer.md` is missing (the writer's primary source).
+
+# Three Critical Rules (Enforced as Hard Gates)
+
+This skill MUST enforce these three rules. Violation of any rule means the skill must refuse to write final paper sections and redirect.
+
+## Rule 1: No final paper writing without final method explanation
+
+```
+GATE CHECK: methods/Qx/qx_final_method_explanation.md MUST exist.
+```
+
+If missing: Stop. Do NOT write the paper section for Qx. The paper writer cannot write the model construction section without knowing the final method, its assumptions, symbols, and mathematical specification. Redirect to `workflow-orchestrator` with a clear blocker report.
+
+The paper writer MAY write a partial draft for other sections that don't depend on the final method (e.g., problem restatement), but MAY NOT write the model construction or results analysis sections.
+
+## Rule 2: No writer handoff without final result analysis
+
+```
+GATE CHECK: results/Qx/reports/qx_final_result_analysis.md MUST exist.
+```
+
+If missing: Stop. Do NOT write the results analysis section for Qx. Raw experiment outputs are not sufficient — the results must have been analyzed and interpreted by the programmer. Redirect to `workflow-orchestrator` with a clear blocker report.
+
+## Rule 3: Writer reads primarily from the solution package
+
+```
+GATE CHECK: results/Qx/reports/qx_solution_package_for_writer.md MUST exist.
+```
+
+If missing: Stop. Do NOT write the paper section for Qx by hunting through scattered results and method notes. The solution package is the writer's curated source. If it's missing, the subquestion is NOT Ready for Writer. Redirect to `workflow-orchestrator` or `solution-package-builder`.
+
 # Preconditions
 
-The following should already exist or be provided:
+The following must exist before writing final paper sections for a subquestion:
 
-- A validated problem parse.
-- A validated problem classification artifact.
-- A validated method plan.
-- Data audit report and cleaned data summary if data is used.
-- Model result artifacts.
-- Robustness or sensitivity report.
-- Figure-table plan.
-- Existing figures and tables, or clearly marked planned figures and tables.
-- Contest formatting requirements if available.
+**REQUIRED (hard gates — verified at start)**:
+1. `methods/Qx/qx_final_method_explanation.md`
+2. `results/Qx/reports/qx_final_result_analysis.md`
+3. `results/Qx/reports/qx_solution_package_for_writer.md`
 
-If model results do not exist, hand back to `code-reviewer`, `python-model-code-generator`, or `matlab-model-code-generator`.
+**Also required for complete sections**:
+- `methods/Qx/qx_figure_table_plan.md` (figure and table plan).
+- Actual figure files referenced in the solution package (must exist on disk).
+- Robustness report at `robustness/Qx/qx_robustness_report.md` (for robustness section).
+- A validated problem parse (for problem restatement).
+- Contest formatting requirements (if available).
 
-If the figure-table plan is missing, hand back to `figure-table-planner`.
+**For global sections** (abstract, problem restatement, assumptions, symbols, conclusion):
+- All subquestion final method explanations (for symbols and assumptions).
+- All subquestion final result analyses (for abstract and conclusion).
 
-If robustness evidence is required but missing, hand back to `robustness-checker`.
+If any hard gate is missing, this skill must refuse and report which gate failed.
 
 # Inputs
 
-Use or request:
+Use or request (for Qx paper section):
 
-- `workspace/problem/problem-parser/problem_parse.json`, if available.
-- `workspace/problem/problem-classifier/problem_classification.json`, if available.
-- `workspace/problem/method-selector/method_plan.json`, if available.
-- `workspace/data/data_report.md`, if available.
-- Model result files under `workspace/results/`.
-- Robustness report and sensitivity tables under `workspace/results/`.
-- Figure-table plan.
-- Existing figures under `workspace/figures/`.
-- Existing paper section drafts under `workspace/paper_sections/`, if any.
-- Required contest paper structure or formatting notes, if available.
+**Primary sources (read first)**:
+- `results/Qx/reports/qx_solution_package_for_writer.md` — THE primary source for the writer.
+- `methods/Qx/qx_final_method_explanation.md` — method details.
+- `results/Qx/reports/qx_final_result_analysis.md` — result details.
+
+**Supporting sources**:
+- `methods/Qx/qx_figure_table_plan.md` — figure/table assignments.
+- `methods/Qx/qx_method_candidates.md` — for method selection narrative.
+- `methods/Qx/qx_method_iteration_log.md` — for iteration history context.
+- `robustness/Qx/qx_robustness_report.md` — for robustness section.
+- Existing paper section drafts under `paper/sections/`, if any.
+- Global symbol table and model assumptions (from `planning/`).
+- Problem parse and classification artifacts.
+- Contest paper structure or formatting notes.
 
 # Workflow
 
-1. Gather validated artifacts.
-   - Identify the available problem parse, method plan, data report, model outputs, robustness report, and figure-table plan.
-   - Separate generated artifacts from planned but not yet generated artifacts.
-   - Do not use missing artifacts as if they exist.
+1. **GATE CHECK: Verify prerequisites.**
+   - Before anything else, check that all three hard-gate files exist for the target subquestion.
+   - If any is missing, STOP immediately and report which gate failed. Do not proceed.
+   - If all gates pass, proceed to step 2.
 
-2. Build a section map.
-   - Map each subquestion to the sections that should answer it.
+2. Read the solution package first.
+   - The solution package is the writer's primary source. It summarizes everything.
+   - Use it to understand the overall narrative before diving into detailed source files.
+   - Follow its section mapping, claims inventory, and figure assignments.
+
+3. Gather the detailed sources.
+   - Read the final method explanation for model details.
+   - Read the final result analysis for numerical claims.
+   - Read the figure-table plan for visual assignments.
+   - Read the robustness report for sensitivity claims.
+
+4. Build a section map.
+   - Map each subquestion to the paper sections that should answer it.
    - Map each model to its assumptions, variables, equations, results, figures, and tables.
-   - Map each major claim to a supporting artifact.
+   - Map each major claim to a supporting artifact from the solution package's claims inventory.
 
-3. Draft standard paper sections.
+5. Draft standard paper sections.
    - Write only the sections requested or appropriate for the current workflow stage.
    - Keep the writing concise, technical, and evidence-based.
    - Avoid filler prose.
+   - For each section, verify that every claim is traceable to an artifact.
 
-4. Maintain artifact traceability.
+6. Maintain artifact traceability.
    - Every numerical claim must point to a result artifact.
    - Every figure or table reference must appear in the figure-table plan or existing files.
    - Every robustness claim must point to a robustness artifact.
-   - Every model description must align with the method plan.
+   - Every model description must align with the final method explanation.
+   - Use the solution package's claims inventory to verify each claim.
 
-5. Write formulas and symbols carefully.
-   - Use mathematical notation only when variables are defined.
-   - Keep notation consistent with the method plan.
+7. Write formulas and symbols carefully.
+   - Use mathematical notation only when variables are defined in the final method explanation.
+   - Keep notation consistent with the global symbol table.
    - Do not introduce new variables without defining them.
-   - Distinguish decision variables, state variables, parameters, inputs, and outputs when relevant.
 
-6. Handle missing evidence explicitly.
+8. Handle missing evidence explicitly.
    - If a result, figure, table, or robustness check is missing, mark the section as incomplete.
    - Do not fill gaps with invented values or generic claims.
    - Recommend the upstream skill needed to complete the missing evidence.
 
-7. Produce section drafts.
-   - Save or recommend saving drafts under `workspace/paper_sections/`.
-   - Use section-oriented file names.
+9. Produce section drafts.
+   - Save drafts under `paper/sections/`.
+   - Use section-oriented file names: `q1.tex` or `q1.md`, `abstract.tex`, `assumptions.tex`, etc.
    - Preserve a clear link between drafts and source artifacts.
 
-8. Recommend final audit.
-   - After section drafts are complete enough, hand off to `quality-assurance-auditor`.
+10. Recommend final audit.
+    - After section drafts are complete enough, hand off to `quality-assurance-auditor`.
 
 # Outputs
 
-Produce paper section drafts and a writing summary such as:
+Produce paper section drafts and a writing summary:
 
-- `workspace/paper_sections/abstract.md`
-- `workspace/paper_sections/problem_restatement.md`
-- `workspace/paper_sections/problem_analysis.md`
-- `workspace/paper_sections/assumptions.md`
-- `workspace/paper_sections/symbols.md`
-- `workspace/paper_sections/data_preprocessing.md`
-- `workspace/paper_sections/model_q1.md`
-- `workspace/paper_sections/model_q2.md`
-- `workspace/paper_sections/model_q3.md`
-- `workspace/paper_sections/robustness.md`
-- `workspace/paper_sections/strengths_limitations.md`
-- `workspace/paper_sections/conclusion.md`
-- section-to-artifact mapping
-- incomplete claims list
-- recommended next skill
+- `paper/sections/abstract.tex` or `.md`
+- `paper/sections/problem_restatement.tex`
+- `paper/sections/problem_analysis.tex`
+- `paper/sections/assumptions.tex`
+- `paper/sections/symbols.tex`
+- `paper/sections/data_preprocessing.tex`
+- `paper/sections/q1.tex`
+- `paper/sections/q2.tex`
+- `paper/sections/q3.tex`
+- `paper/sections/q4.tex`
+- `paper/sections/robustness.tex`
+- `paper/sections/strengths_limitations.tex`
+- `paper/sections/conclusion.tex`
+- Section-to-artifact mapping.
+- Incomplete claims list.
+- Recommended next skill.
 
 # Output format
 
@@ -127,30 +184,28 @@ Prefer this JSON-compatible summary:
 {
   "paper_writing_summary": {
     "status": "drafted_with_gaps",
+    "target_subquestion": "Q1",
+    "gate_check": {
+      "rule1_method_explanation_exists": true,
+      "rule2_result_analysis_exists": true,
+      "rule3_solution_package_exists": true,
+      "all_gates_passed": true
+    },
+    "primary_source_used": "results/Q1/reports/q1_solution_package_for_writer.md",
     "drafted_sections": [
-      "workspace/paper_sections/problem_restatement.md",
-      "workspace/paper_sections/model_q1.md",
-      "workspace/paper_sections/robustness.md"
+      "paper/sections/q1.tex"
     ],
-    "incomplete_sections": [
-      {
-        "section": "conclusion",
-        "reason": "Final QA has not confirmed whether all subquestions are fully answered."
-      }
-    ],
-    "unsupported_claims": [
-      {
-        "claim": "The model is globally stable.",
-        "reason": "Robustness checks only cover moderate weight perturbation."
-      }
-    ],
+    "incomplete_sections": [],
+    "unsupported_claims": [],
     "artifact_mapping": [
       {
-        "section": "model_q1.md",
+        "section": "q1.tex",
         "uses_artifacts": [
-          "workspace/problem/method-selector/method_plan.json",
-          "workspace/results/q1_main_results.csv",
-          "workspace/figures/q1_ranking_comparison.png"
+          "methods/Q1/q1_final_method_explanation.md",
+          "results/Q1/reports/q1_final_result_analysis.md",
+          "results/Q1/reports/q1_solution_package_for_writer.md",
+          "results/Q1/experiments/final/figures/q1_ranking.png",
+          "robustness/Q1/q1_robustness_report.md"
         ]
       }
     ],
@@ -159,212 +214,85 @@ Prefer this JSON-compatible summary:
 }
 ```
 
-If a JSON block is too rigid for the situation, use a concise Markdown report with the same fields.
+If a JSON block is too rigid, use a concise Markdown report with the same fields.
 
 # Paper section types
 
-Use these section types when appropriate.
-
 ## Abstract
-
-Purpose:
-
-- Summarize the problem, methods, key results, robustness evidence, and final conclusions.
-
-Requirements:
-
-- Mention the main task.
-- Mention the main methods actually used.
-- Mention only numerical results that exist.
-- Mention robustness only if robustness checks exist.
-- Keep concise.
-
-Do not:
-
-- invent final scores, rankings, errors, or optimal values
-- claim superiority without comparison evidence
-- include unsupported broad claims
+Summarize the problem, methods, key results, robustness evidence, and final conclusions. Mention only numerical results that exist. Do not invent values or claim superiority without evidence.
 
 ## Problem restatement
-
-Purpose:
-
-- Restate the problem in the team's own words while preserving the original meaning.
-
-Requirements:
-
-- Include background, main goal, subquestions, required outputs, and constraints.
-- Avoid adding new requirements not present in the problem.
+Restate the problem in the team's own words. Include background, main goal, subquestions, required outputs, and constraints.
 
 ## Problem analysis
-
-Purpose:
-
-- Explain how the problem is decomposed and why the workflow order is reasonable.
-
-Requirements:
-
-- Map each subquestion to its task type.
-- Explain dependencies between subquestions.
-- Explain why later sections follow the chosen order.
+Explain how the problem is decomposed and why the workflow order is reasonable. Map each subquestion to its task type. Explain dependencies.
 
 ## Assumptions
-
-Purpose:
-
-- State simplifying assumptions needed for modeling.
-
-Requirements:
-
-- Each assumption should be necessary, interpretable, and linked to a modeling need.
-- Mention possible impact when an assumption is strong.
-
-Do not:
-
-- use generic assumptions that do not affect the model
-- hide missing data as an assumption
+State simplifying assumptions needed for modeling. Each assumption should be necessary, interpretable, and linked to a modeling need. Distinguish necessary from simplifying assumptions.
 
 ## Symbols and definitions
-
-Purpose:
-
-- Define variables, parameters, sets, indices, functions, and outputs.
-
-Requirements:
-
-- Distinguish decision variables, state variables, parameters, inputs, and outputs.
-- Include units where available.
-- Keep notation consistent across sections.
+Define variables, parameters, sets, indices, functions, and outputs. Distinguish decision variables, state variables, parameters, inputs, and outputs. Include units where available. Keep notation consistent across sections.
 
 ## Data preprocessing
+Explain data sources, field meanings, cleaning operations, and readiness. Mention missing values, outliers, units, transformations, and remaining risks.
 
-Purpose:
+## Model construction (per subquestion)
+Present the final model: assumptions, symbols, objective function/ evaluation criterion, constraints, solution procedure. Align with the final method explanation. Include baseline before claiming improvement. Mention eliminated methods to demonstrate thoroughness.
 
-- Explain data sources, field meanings, cleaning operations, and readiness.
+## Model solution (per subquestion)
+Explain how the model was solved or computed. Link to generated and reviewed scripts. Mention solver, algorithm, or computation pipeline.
 
-Requirements:
+## Results analysis (per subquestion)
+Interpret model outputs. Use result tables and figures. Keep conclusions proportional to evidence. Separate result description from causal interpretation. Reference the final result analysis.
 
-- Use the data report.
-- Mention missing values, outliers, units, transformations, and remaining risks.
-- Do not claim raw data was changed if cleaned copies were used.
-
-## Model construction
-
-Purpose:
-
-- Present the baseline, main model, and optional improved model for each subquestion.
-
-Requirements:
-
-- Align with the method plan.
-- Define objectives, constraints, variables, or equations where applicable.
-- Explain why the model fits the task type and data.
-- Include baseline before claiming improvement.
-
-## Model solution
-
-Purpose:
-
-- Explain how the model was solved or computed.
-
-Requirements:
-
-- Link to generated and reviewed scripts.
-- Mention solver, algorithm, procedure, or computation pipeline where relevant.
-- Avoid unsupported implementation details.
-
-## Results analysis
-
-Purpose:
-
-- Interpret model outputs.
-
-Requirements:
-
-- Use result tables and figures.
-- Keep conclusions proportional to evidence.
-- Separate result description from causal interpretation.
+## Method selection narrative (per subquestion, optional)
+Describe the candidate method pool, what was tried, what was eliminated, why the final method was chosen. Supported by comparison figures (Type 2) and experiment reports.
 
 ## Robustness and sensitivity analysis
-
-Purpose:
-
-- Show whether conclusions are stable.
-
-Requirements:
-
-- Use robustness-checker outputs.
-- Separate stable and fragile conclusions.
-- State conclusion boundaries.
+Show whether conclusions are stable. Use robustness-checker outputs. Separate stable and fragile conclusions. State conclusion boundaries.
 
 ## Strengths and limitations
-
-Purpose:
-
-- Explain what the model does well and where it may fail.
-
-Requirements:
-
-- Be specific.
-- Link limitations to assumptions, data, method, or robustness findings.
+Explain what the model does well and where it may fail. Be specific. Link limitations to assumptions, data, method, or robustness findings.
 
 ## Conclusion and recommendations
-
-Purpose:
-
-- Answer the original subquestions and provide final recommendations.
-
-Requirements:
-
-- Every conclusion should map to a subquestion.
-- Avoid conclusions not supported by results or QA.
+Answer the original subquestions and provide final recommendations. Every conclusion should map to a subquestion. Avoid conclusions not supported by results or QA.
 
 ## Appendix notes
-
-Purpose:
-
-- Describe code, extra tables, parameter settings, or supplementary derivations.
-
-Requirements:
-
-- Link to scripts and outputs.
-- Do not use appendices to hide unsupported reasoning.
+Describe code, extra tables, parameter settings, or supplementary derivations. Link to scripts and outputs.
 
 # Writing rules
 
 - Write from validated artifacts, not memory or guesswork.
-- Keep every major claim traceable.
+- The solution package is the primary source — use it first, then verify against detailed sources.
+- Keep every major claim traceable to an artifact.
 - Use concise, technical language.
-- Prefer clear structure over ornate language.
 - Do not write numerical claims without result artifacts.
-- Do not cite figures or tables that do not exist or are only planned unless explicitly marked as planned.
-- Do not treat planned figures as generated evidence.
-- Do not invent references.
-- Do not invent experiments.
-- Do not invent parameter values.
+- Do not cite figures or tables that do not exist.
+- Do not invent references, experiments, or parameter values.
 - Do not inflate conclusions beyond robustness evidence.
 - Do not hide uncertainty.
 - If evidence is missing, mark the section incomplete and name the missing artifact.
+- If the solution package says a claim is "to avoid or downgrade", respect that.
 - Avoid filler phrases that do not advance the argument.
 
 # Rules
 
-- Do not run code.
-- Do not clean data.
-- Do not change models.
-- Do not fabricate data, results, references, figures, or tables.
-- Do not perform final QA.
-- Do not approve final submission.
+- CRITICAL: Enforce the three gate checks before writing ANY final section for a subquestion.
+- If gates fail, stop and redirect — do not write the final paper.
+- Partial drafts may be written for non-gated sections (problem restatement, data preprocessing) but must be marked as "DRAFT — awaiting [missing prerequisite]".
+- Do not run code, clean data, change models, or fabricate data/results/references/figures/tables.
+- Do not perform final QA or approve final submission.
 - Do not overwrite validated artifacts without permission.
-- Do not introduce notation that conflicts with the method plan.
-- Do not merge final paper unless QA passes.
-- Keep section drafts modular and reviewable.
+- Do not introduce notation that conflicts with the global symbol table or final method explanation.
 - Mark unsupported claims explicitly.
+- Keep section drafts modular and reviewable.
 
 # Verification
 
 Before handing off, verify:
 
+- Gate check passed for the target subquestion (all three rules satisfied).
+- The solution package was used as the primary source.
 - Every drafted section uses only available artifacts.
 - Every numerical claim is backed by a result file.
 - Every figure or table reference maps to the figure-table plan or existing file.
@@ -380,6 +308,9 @@ Before handing off, verify:
 
 Stop and report a blocker if:
 
+- **GATE FAILURE (Rule 1)**: `methods/Qx/qx_final_method_explanation.md` is missing. → Redirect to `workflow-orchestrator` or `final-method-explainer`.
+- **GATE FAILURE (Rule 2)**: `results/Qx/reports/qx_final_result_analysis.md` is missing. → Redirect to `workflow-orchestrator` or `result-report-generator`.
+- **GATE FAILURE (Rule 3)**: `results/Qx/reports/qx_solution_package_for_writer.md` is missing. → Redirect to `workflow-orchestrator` or `solution-package-builder`.
 - Model results are missing for a section that requires them.
 - Figure-table plan is missing.
 - Robustness results are missing for a robustness claim.
@@ -392,6 +323,7 @@ Stop and report a blocker if:
 
 This skill must stop instead of guessing when:
 
+- Any of the three hard-gate files is missing (see above).
 - Drafting would require inventing data, results, figures, tables, references, parameters, or experiments.
 - A section depends on a missing upstream artifact.
 - The available artifacts contradict each other.
@@ -400,8 +332,8 @@ This skill must stop instead of guessing when:
 - Continuing would overwrite reviewed section drafts without permission.
 
 When stopping, output:
-
 - the blocker
+- which gate failed (if applicable)
 - why it matters
 - affected section
 - missing artifact or evidence needed
@@ -410,13 +342,13 @@ When stopping, output:
 
 # Handoff
 
-After producing paper section drafts, hand off to:
+After producing paper section drafts with all gates passed, hand off to:
 
 `quality-assurance-auditor`
 
 The handoff should include:
-
 - drafted section paths
+- gate check results
 - artifact mapping
 - figure and table references
 - unsupported or incomplete claims
@@ -424,98 +356,147 @@ The handoff should include:
 - known writing risks
 - sections requiring human review
 
-If missing model results block writing, hand back to:
+If missing model results block writing, hand back to the appropriate code generator or `code-reviewer`.
 
-`code-reviewer` or a language-specific model-code-generator
+If missing robustness evidence blocks writing, hand back to `robustness-checker`.
 
-If missing robustness evidence blocks writing, hand back to:
+If missing visual planning blocks writing, hand back to `figure-table-planner`.
 
-`robustness-checker`
-
-If missing visual planning blocks writing, hand back to:
-
-`figure-table-planner`
-
-Do not hand off directly to final assembly unless `quality-assurance-auditor` has passed.
+If gates failed, hand back to `workflow-orchestrator` with the specific gate failure report.
 
 # Examples
 
-## Example 1: Draft a model section with traceable artifacts
+## Example 1: All gates pass — write Q1 section
 
 Input state:
-
-- Q1 method plan exists.
-- Q1 result table exists.
-- Figure-table plan maps Q1 ranking table to the Q1 result section.
+- `methods/Q1/q1_final_method_explanation.md` exists.
+- `results/Q1/reports/q1_final_result_analysis.md` exists.
+- `results/Q1/reports/q1_solution_package_for_writer.md` exists.
+- Figure-table plan exists.
+- User asks: "write the Q1 paper section."
 
 Output:
-
 ```json
 {
   "paper_writing_summary": {
     "status": "drafted",
+    "target_subquestion": "Q1",
+    "gate_check": {
+      "rule1_method_explanation_exists": true,
+      "rule2_result_analysis_exists": true,
+      "rule3_solution_package_exists": true,
+      "all_gates_passed": true
+    },
     "drafted_sections": [
-      "workspace/paper_sections/model_q1.md"
+      "paper/sections/q1.tex"
     ],
-    "artifact_mapping": [
-      {
-        "section": "model_q1.md",
-        "uses_artifacts": [
-          "workspace/problem/method-selector/method_plan.json",
-          "workspace/results/q1_main_results.csv",
-          "workspace/figures/q1_ranking_comparison.png"
-        ]
-      }
-    ],
-    "unsupported_claims": [],
+    "primary_source_used": "results/Q1/reports/q1_solution_package_for_writer.md",
     "recommended_next_skill": "quality-assurance-auditor"
   }
 }
 ```
 
-## Example 2: Block unsupported numerical conclusion
+## Example 2: Gate failure — Rule 1 violation
 
 Input state:
-
-- User asks to write “the proposed model improves accuracy by 20%.”
-- No error comparison table exists.
+- User asks: "write the Q2 paper section."
+- `methods/Q2/q2_final_method_explanation.md` does NOT exist (modeler hasn't confirmed final method).
+- `results/Q2/reports/q2_final_result_analysis.md` exists.
+- `results/Q2/reports/q2_solution_package_for_writer.md` does NOT exist (blocked by Rule 1).
 
 Output:
-
 ```json
 {
   "blocked_items": [
-    "The requested numerical improvement claim has no supporting result artifact."
+    "GATE FAILURE (Rule 1): Cannot write Q2 paper section. The final method explanation is missing at methods/Q2/q2_final_method_explanation.md."
   ],
-  "affected_section": "results_analysis",
-  "missing_artifact": "baseline vs main model error comparison table",
-  "recommended_next_skill": "robustness-checker",
-  "recommended_next_action": "Generate or provide the comparison result before writing this claim."
+  "gate_check": {
+    "rule1_method_explanation_exists": false,
+    "rule2_result_analysis_exists": true,
+    "rule3_solution_package_exists": false,
+    "all_gates_passed": false
+  },
+  "what_can_be_written": [
+    "Problem restatement section (does not depend on final method).",
+    "Data preprocessing section (if data report exists)."
+  ],
+  "recommended_next_skill": "workflow-orchestrator",
+  "recommended_next_action": "The modeler must confirm the final method for Q2 and run final-method-explainer. Then solution-package-builder must produce the solution package. Only then can the paper writer proceed."
 }
 ```
 
-## Example 3: Draft with incomplete conclusion
+## Example 3: Gate failure — Rule 2 violation
 
 Input state:
-
-- Sections for Q1 and Q2 exist.
-- Q3 model result is missing.
-- User asks for conclusion.
+- Q3 has final method explanation.
+- Q3 has raw experiment outputs but no final result analysis.
+- User says: "Q3 is done, write it up."
 
 Output:
+```json
+{
+  "blocked_items": [
+    "GATE FAILURE (Rule 2): Cannot write Q3 paper section. The final result analysis is missing at results/Q3/reports/q3_final_result_analysis.md. Raw experiment outputs are not sufficient — the programmer must analyze and interpret the results first."
+  ],
+  "gate_check": {
+    "rule1_method_explanation_exists": true,
+    "rule2_result_analysis_exists": false,
+    "rule3_solution_package_exists": false,
+    "all_gates_passed": false
+  },
+  "recommended_next_skill": "result-report-generator",
+  "recommended_next_action": "Run result-report-generator in final mode to produce the final result analysis for Q3. Then run solution-package-builder."
+}
+```
 
+## Example 4: Gate failure — Rule 3 violation
+
+Input state:
+- Q4 has final method explanation and final result analysis.
+- But no solution package has been built.
+- User says: "write Q4 paper section."
+
+Output:
+```json
+{
+  "blocked_items": [
+    "GATE FAILURE (Rule 3): Cannot write Q4 paper section. The solution package is missing at results/Q4/reports/q4_solution_package_for_writer.md. The paper writer should use the solution package as primary source, not scatter through method and result files."
+  ],
+  "gate_check": {
+    "rule1_method_explanation_exists": true,
+    "rule2_result_analysis_exists": true,
+    "rule3_solution_package_exists": false,
+    "all_gates_passed": false
+  },
+  "recommended_next_skill": "solution-package-builder",
+  "recommended_next_action": "Run solution-package-builder for Q4 to produce the writer-facing package. Then the paper writer can proceed."
+}
+```
+
+## Example 5: Write only non-gated sections
+
+Input state:
+- Q2 gates fail (Rule 1).
+- But the user needs to write problem restatement and data preprocessing sections (which don't depend on Q2's final method).
+
+Output:
 ```json
 {
   "paper_writing_summary": {
     "status": "partial_draft_only",
+    "target_subquestion": "Q2",
+    "gate_check": {
+      "rule1_method_explanation_exists": false,
+      "rule2_result_analysis_exists": true,
+      "rule3_solution_package_exists": false,
+      "all_gates_passed": false
+    },
     "drafted_sections": [
-      "workspace/paper_sections/conclusion_partial.md"
+      "paper/sections/problem_restatement.md (DRAFT — not Q2-dependent)",
+      "paper/sections/data_preprocessing.md (DRAFT — not Q2-dependent)"
     ],
-    "incomplete_sections": [
-      {
-        "section": "conclusion",
-        "reason": "Q3 has no validated result, so the final conclusion cannot answer all subquestions."
-      }
+    "blocked_sections": [
+      "paper/sections/q2.tex (BLOCKED — awaiting final method explanation and solution package)"
     ],
     "recommended_next_skill": "workflow-orchestrator"
   }

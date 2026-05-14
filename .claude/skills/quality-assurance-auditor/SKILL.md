@@ -8,7 +8,9 @@ license: MIT
 
 Audit the complete mathematical modeling contest solution before final submission.
 
-This skill checks whether the solution answers every subquestion, whether models, code, results, figures, robustness checks, and paper sections are mutually consistent, and whether unsupported claims or missing artifacts block final delivery.
+This skill checks whether the solution answers every subquestion, whether models, code, results, figures, robustness checks, and paper sections are mutually consistent, whether the full workflow completeness requirements are met, and whether unsupported claims or missing artifacts block final delivery.
+
+This skill checks BOTH paper quality AND workflow completeness. It verifies that every subquestion has gone through the full delivery chain: candidate methods → experiments → final method explanation → final result analysis → solution package → paper sections.
 
 This skill does not invent missing results, rewrite the full paper, rerun models, or approve submission when evidence is incomplete.
 
@@ -16,7 +18,7 @@ This skill does not invent missing results, rewrite the full paper, rerun models
 
 Use this skill:
 
-- After `paper-section-writer` has drafted paper sections.
+- After `paper-section-writer` has drafted paper sections for all subquestions.
 - Before final assembly or submission.
 - When checking whether the solution is logically complete.
 - When identifying blocking issues, minor issues, and repair actions.
@@ -28,13 +30,13 @@ The following should already exist or be provided:
 
 - Parsed problem and subquestions.
 - Problem classification.
-- Method plan.
+- Candidate method pools per subquestion.
 - Data report and cleaned data summary, if data is used.
 - Reviewed model code.
-- Model result artifacts.
-- Robustness or sensitivity report.
-- Figure-table plan.
-- Paper section drafts.
+- Model result artifacts per subquestion.
+- Robustness or sensitivity reports per subquestion.
+- Figure-table plans per subquestion.
+- Paper section drafts for all subquestions.
 
 If paper sections are missing, hand back to `paper-section-writer`.
 
@@ -46,56 +48,82 @@ Use or request:
 
 - `workspace/problem/problem-parser/problem_parse.json`
 - `workspace/problem/problem-classifier/problem_classification.json`
-- `workspace/problem/method-selector/method_plan.json`
-- `workspace/data/data_report.md`
-- result files under `workspace/results/`
-- robustness reports and sensitivity tables under `workspace/results/`
-- figures under `workspace/figures/`
-- paper drafts under `workspace/paper_sections/`
-- generated code under `workspace/code/`
-- contest requirements or submission rules if available
+- `methods/Qx/qx_method_candidates.md` (all subquestions)
+- `methods/Qx/qx_method_iteration_log.md` (all subquestions)
+- `methods/Qx/qx_final_method_explanation.md` (all subquestions)
+- `results/Qx/reports/qx_final_result_analysis.md` (all subquestions)
+- `results/Qx/reports/qx_solution_package_for_writer.md` (all subquestions)
+- Result files under `results/Qx/experiments/`
+- Robustness reports under `robustness/Qx/`
+- Figure-table plans under `methods/Qx/`
+- Figures under `results/Qx/experiments/*/figures/` and `paper/figures/`
+- Paper drafts under `paper/sections/`
+- Generated code under `code/`
+- `planning/progress_dashboard.md` (workflow status)
+- Contest requirements or submission rules if available
 
 # Workflow
 
 1. Check problem coverage.
-   - Verify every original subquestion is represented.
+   - Verify every original subquestion is represented in the paper.
    - Verify each subquestion has a corresponding model, result, and written answer.
    - Mark unanswered or partially answered subquestions as blocking issues.
 
-2. Check artifact lineage.
-   - Trace each major paper claim back to problem parse, method plan, data, code, result, figure, or robustness artifact.
+2. **Check workflow completeness (NEW — expanded check).**
+   - For each subquestion, verify the full delivery chain:
+     1. Candidate method pool exists (`methods/Qx/qx_method_candidates.md`).
+     2. Experiment reports exist (at least one round at `results/Qx/experiments/roundN/`).
+     3. Method iteration log exists (`methods/Qx/qx_method_iteration_log.md`).
+     4. Final method explanation exists (`methods/Qx/qx_final_method_explanation.md`).
+     5. Final result analysis exists (`results/Qx/reports/qx_final_result_analysis.md`).
+     6. Solution package exists (`results/Qx/reports/qx_solution_package_for_writer.md`).
+     7. Robustness report exists (`robustness/Qx/qx_robustness_report.md`) or a justified exception.
+     8. Figure-table plan exists (`methods/Qx/qx_figure_table_plan.md`).
+   - Mark any missing link in this chain as a blocking issue.
+
+3. Check the three critical rules.
+   - Rule 1: Verify paper model description matches the final method explanation (not an early candidate pool).
+   - Rule 2: Verify paper results come from the final result analysis (not raw experiment outputs directly).
+   - Rule 3: Verify the solution package exists and the paper writer used it.
+
+4. Check artifact lineage.
+   - Trace each major paper claim back to problem parse, method explanation, data, code, result, figure, or robustness artifact.
    - Mark claims without artifacts as unsupported.
 
-3. Check model consistency.
+5. Check model consistency.
    - Verify models match the classified problem types.
    - Verify baseline models exist for main models unless explicitly justified.
-   - Verify the paper does not describe a different model than the code or method plan.
+   - Verify the paper describes the final method (from `qx_final_method_explanation.md`), not an earlier candidate.
+   - Verify eliminated methods are mentioned appropriately.
 
-4. Check data and result consistency.
+6. Check data and result consistency.
    - Verify raw data was not overwritten.
    - Verify cleaned data and field mappings are documented.
    - Verify result tables come from reviewed scripts or accepted computation.
    - Verify units, variables, and dimensions are consistent.
 
-5. Check robustness evidence.
-   - Verify robustness or sensitivity checks exist before final delivery.
-   - Verify robustness claims do not exceed completed checks.
-   - Separate stable and fragile conclusions.
-
-6. Check figures and tables.
-   - Verify every referenced figure or table exists or is explicitly marked as planned.
+7. Check paper quality.
+   - Verify every referenced figure or table exists on disk.
+   - Verify figures in the paper match the figure-table plan's Type 3 (论文图) classification.
+   - Verify no Type 1 (诊断图) figures accidentally appear in the paper.
    - Verify every figure or table has a source artifact.
    - Verify captions support the intended claim.
-   - Reject decorative or unsupported visuals.
-
-7. Check paper quality.
    - Verify assumptions are necessary and linked to modeling needs.
-   - Verify notation is defined before use.
+   - Verify notation is defined before use and consistent with the global symbol table.
    - Verify conclusions map back to subquestions.
    - Verify limitations are not hidden.
-   - Verify no references, numerical values, experiments, or conclusions are fabricated.
+   - Reject decorative or unsupported visuals.
 
-8. Produce a QA report.
+8. Check for fabrication and exaggeration.
+   - Verify no references are fabricated.
+   - Verify no numerical values are invented.
+   - Verify no experiments are claimed that were not run.
+   - Verify robustness claims do not exceed completed checks.
+   - Verify conclusions do not exceed evidence.
+   - Flag any claim that cannot be traced to an artifact.
+
+9. Produce a QA report.
+   - Save to `paper/qa_report.md`.
    - Separate blocking issues from minor issues.
    - Provide a repair plan.
    - Route each repair to the appropriate upstream skill.
@@ -103,85 +131,158 @@ Use or request:
 
 # Outputs
 
-Produce a QA report containing:
+Produce a QA report at:
 
-- `workspace/qa_report.md`
-- `qa_status`
+- `paper/qa_report.md`
+
+Containing:
+
+- `qa_status` (passed / failed)
+- `final_assembly_allowed` (true / false)
 - `blocking_issues`
 - `minor_issues`
+- `workflow_completeness_check` (per subquestion)
+- `three_critical_rules_check`
 - `unsupported_claims`
+- `fabrication_risks`
 - `artifact_traceability`
 - `subquestion_coverage`
 - `repair_plan`
 - `recommended_next_skill`
-- `final_assembly_allowed`
 
 # Output format
 
-Prefer this JSON-compatible structure for the QA summary, and also save a Markdown report at `workspace/qa_report.md`:
+```markdown
+# QA Report
 
-```json
-{
-  "qa_status": "failed",
-  "final_assembly_allowed": false,
-  "blocking_issues": [
-    {
-      "issue": "Q3 has no validated result artifact.",
-      "why_it_matters": "The final conclusion cannot answer all subquestions.",
-      "repair_skill": "python-model-code-generator or matlab-model-code-generator"
-    }
-  ],
-  "minor_issues": [
-    {
-      "issue": "Figure caption does not explain the main takeaway.",
-      "repair_skill": "paper-section-writer"
-    }
-  ],
-  "unsupported_claims": [
-    {
-      "claim": "The model is globally stable.",
-      "reason": "Robustness checks only cover limited perturbations."
-    }
-  ],
-  "subquestion_coverage": [
-    {
-      "id": "Q1",
-      "status": "answered",
-      "evidence": [
-        "method plan",
-        "result table",
-        "paper section"
-      ]
-    }
-  ],
-  "repair_plan": [
-    "Generate or provide Q3 result artifact.",
-    "Revise unsupported robustness claim.",
-    "Update figure caption."
-  ],
-  "recommended_next_skill": "workflow-orchestrator"
-}
+## Overall Status
+
+- **QA Status**: passed / failed
+- **Final Assembly Allowed**: true / false
+- **Date**: [timestamp]
+
+## Workflow Completeness Check
+
+| Check | Q1 | Q2 | Q3 | Q4 |
+|-------|----|----|----|-----|
+| 1. Candidate method pool | ✅ | ✅ | ✅ | ❌ |
+| 2. Experiment report(s) | ✅ (R2) | ✅ (R1) | ❌ | ❌ |
+| 3. Method iteration log | ✅ | ❌ | ❌ | ❌ |
+| 4. Final method explanation | ✅ | ❌ | ❌ | ❌ |
+| 5. Final result analysis | ✅ | ❌ | ❌ | ❌ |
+| 6. Solution package | ✅ | ❌ | ❌ | ❌ |
+| 7. Robustness report | ✅ | ❌ | ❌ | ❌ |
+| 8. Figure-table plan | ✅ | ❌ | ❌ | ❌ |
+
+## Three Critical Rules Check
+
+| Rule | Q1 | Q2 | Q3 | Q4 | Status |
+|------|----|----|----|-----|--------|
+| Rule 1: Paper method matches final method explanation | ✅ | ❌ (no final explanation) | N/A | N/A | Q2 FAIL |
+| Rule 2: Paper results from final result analysis | ✅ | N/A | N/A | N/A | PASS |
+| Rule 3: Solution package exists and was used | ✅ | ❌ (no package) | N/A | N/A | Q2 FAIL |
+
+## Subquestion Coverage
+
+| Subquestion | Answered in Paper | Model Exists | Results Exist | Robustness Exists | Status |
+|-------------|-------------------|-------------|---------------|-------------------|--------|
+| Q1 | ✅ | ✅ (entropy-TOPSIS) | ✅ | ✅ | Complete |
+| Q2 | ⏳ (partial draft) | ❌ (no final) | ❌ | ❌ | Blocked |
+| Q3 | ❌ | ❌ | ❌ | ❌ | Blocked |
+| Q4 | ❌ | ❌ | ❌ | ❌ | Blocked |
+
+## Blocking Issues
+
+| # | Issue | Affects | Why It Matters | Repair Skill |
+|---|-------|---------|---------------|--------------|
+| 1 | Q2 has no final method explanation | Q2 completion | Paper cannot describe the final model | `final-method-explainer` |
+| 2 | Q3 not started | Q3 completion | Subquestion unanswered | `workflow-orchestrator` |
+| 3 | Q4 not started | Q4 completion | Subquestion unanswered | `workflow-orchestrator` |
+
+## Minor Issues
+
+| # | Issue | Affects | Repair Skill |
+|---|-------|---------|--------------|
+| 1 | Q1 Figure 1.3 caption does not state the main takeaway | Q1 paper section | `paper-section-writer` |
+| 2 | Q1 robustness report missing boundary condition statement | Q1 robustness section | `robustness-checker` |
+
+## Unsupported Claims
+
+| # | Claim | Location | Why Unsupported | Action |
+|---|-------|----------|----------------|--------|
+| 1 | "The model is globally stable." | paper/sections/q1.tex | Robustness only checked ±10% weight perturbation | Downgrade to "stable under moderate perturbation" |
+
+## Fabrication Risks
+
+| # | Risk | Location | Evidence |
+|---|------|----------|----------|
+| — | (none detected) | — | — |
+
+## Artifact Traceability (spot check)
+
+| Paper Claim | Source Artifact | Traceable? |
+|-------------|----------------|------------|
+| "City A ranks highest with score 0.88." | `results/Q1/experiments/final/tables/m2_scores.csv` | ✅ |
+
+## Repair Plan
+
+1. **BLOCKING**: Run `final-method-explainer` for Q2 to produce `methods/Q2/q2_final_method_explanation.md`.
+2. **BLOCKING**: Run `workflow-orchestrator` to plan Q3 and Q4 execution.
+3. **MINOR**: Update Q1 Figure 1.3 caption via `paper-section-writer`.
+4. **MINOR**: Add boundary condition statement to Q1 robustness report via `robustness-checker`.
+
+## Recommended Next Skill
+
+- **If QA failed**: `workflow-orchestrator` (with repair plan)
+- **If QA passed**: `workflow-orchestrator` (for final assembly)
 ```
 
-If JSON is too rigid, use a concise Markdown report with the same fields.
+# Expanded QA checklist
 
-# QA checklist
+## Workflow completeness (per subquestion)
+- [ ] Candidate method pool exists
+- [ ] Experiment report(s) exist
+- [ ] Method iteration log exists
+- [ ] Final method explanation exists
+- [ ] Final result analysis exists
+- [ ] Solution package exists
+- [ ] Robustness report exists (or justified exception)
+- [ ] Figure-table plan exists
 
-Check at least:
+## Three critical rules
+- [ ] Paper model description matches final method explanation (not earlier candidate pool)
+- [ ] Paper results come from final result analysis (not raw experiment outputs)
+- [ ] Solution package exists and was used as primary source
 
-- every subquestion is answered
-- every answer has model-result-paper alignment
-- every main model has a baseline or justified exception
-- every numerical claim has a result artifact
-- every figure or table has a source artifact
-- every robustness claim has robustness evidence
-- every conclusion maps to a subquestion
-- assumptions are necessary and stated clearly
-- notation is defined and consistent
-- code outputs match paper claims
-- raw data is preserved
-- limitations are stated
-- no fabricated data, references, results, figures, or experiments exist
+## Problem coverage
+- [ ] Every subquestion is answered in the paper
+- [ ] Every answer has model-result-paper alignment
+
+## Model consistency
+- [ ] Every main model has a baseline or justified exception
+- [ ] Paper describes the final method, not an early draft
+- [ ] Eliminated methods are mentioned where appropriate
+
+## Evidence quality
+- [ ] Every numerical claim has a result artifact
+- [ ] Every figure or table has a source artifact
+- [ ] Every figure in the paper exists on disk
+- [ ] No Type 1 (诊断图) figures in the paper
+- [ ] Every robustness claim has robustness evidence
+
+## Paper quality
+- [ ] Every conclusion maps to a subquestion
+- [ ] Assumptions are necessary and stated clearly
+- [ ] Notation is defined and consistent (cross-check with global symbol table)
+- [ ] Code outputs match paper claims
+- [ ] Raw data is preserved
+- [ ] Limitations are stated
+
+## Anti-fabrication
+- [ ] No fabricated data, references, results, figures, or experiments
+- [ ] No invented numerical values
+- [ ] No unsupported superiority claims
+- [ ] No hidden uncertainty
 
 # Rules
 
@@ -194,43 +295,48 @@ Check at least:
 - Do not change upstream artifacts silently.
 - Route repairs to the correct upstream skill.
 - Keep QA findings specific and actionable.
+- Check workflow completeness — it's not just about paper quality.
 
 # Verification
 
 Before approving final assembly, verify:
 
 - `blocking_issues` is empty.
+- `workflow_completeness_check` passes for all subquestions (8/8 checks per subquestion, or justified exceptions).
+- `three_critical_rules_check` passes for all subquestions.
 - `unsupported_claims` is empty or explicitly removed from final text.
-- every subquestion is covered.
-- baseline and robustness requirements are satisfied.
-- all figures and tables are traceable.
-- final conclusions do not exceed evidence.
+- Every subquestion is covered.
+- Baseline and robustness requirements are satisfied.
+- All figures and tables are traceable.
+- Final conclusions do not exceed evidence.
+- No fabrication risks detected.
 - `final_assembly_allowed` is true only when QA passes.
 
 # Failure modes
 
 Stop and report a blocker if:
 
-- paper sections are missing
-- model results are missing
-- robustness evidence is missing before final delivery
-- figures or tables are referenced but not available
-- claims cannot be traced to artifacts
-- subquestions are unanswered
-- final assembly is requested before QA passes
+- Paper sections are missing.
+- Model results are missing.
+- Robustness evidence is missing before final delivery.
+- Figures or tables are referenced but not available.
+- Claims cannot be traced to artifacts.
+- Subquestions are unanswered.
+- Any critical rule is violated.
+- Workflow completeness chain is broken.
+- Final assembly is requested before QA passes.
 
 # Stop conditions
 
 This skill must stop instead of guessing when:
 
-- an issue requires missing data or missing result artifacts
-- the paper and code describe incompatible models
-- final conclusions depend on unsupported claims
-- fixing the issue requires upstream modeling, code, or data work
-- continuing would require inventing evidence
+- An issue requires missing data or missing result artifacts.
+- The paper and code describe incompatible models.
+- Final conclusions depend on unsupported claims.
+- Fixing the issue requires upstream modeling, code, or data work.
+- Continuing would require inventing evidence.
 
 When stopping, output:
-
 - blocker
 - why it matters
 - affected section or subquestion
@@ -240,27 +346,29 @@ When stopping, output:
 
 # Handoff
 
-If QA passes, hand off to:
+If QA passes:
+→ `workflow-orchestrator` with `final_assembly_allowed: true`.
 
-`workflow-orchestrator`
+If QA fails:
+→ `workflow-orchestrator` with repair plan routing to the relevant upstream skill.
 
-with `final_assembly_allowed: true`.
-
-If QA fails, hand off to the relevant upstream skill:
-
-- `problem-parser` for missing or misread subquestions
-- `problem-classifier` for wrong task type mapping
-- `method-selector` for model-plan issues
-- `data-auditor-cleaner` for data issues
-- `python-model-code-generator` or `matlab-model-code-generator` for missing result generation
-- `code-reviewer` for code or artifact issues
-- `robustness-checker` for missing stability evidence
-- `figure-table-planner` for unsupported visuals
-- `paper-section-writer` for writing or traceability issues
+Repair routing:
+- `problem-parser` → missing or misread subquestions
+- `problem-classifier` → wrong task type mapping
+- `method-selector` → missing candidate pool
+- `data-auditor-cleaner` → data issues
+- `model-code-analyzer` or code generators → missing code
+- `code-reviewer` → code or artifact issues
+- `result-report-generator` → missing experiment report or final result analysis
+- `final-method-explainer` → missing final method explanation
+- `solution-package-builder` → missing solution package
+- `robustness-checker` → missing stability evidence
+- `figure-table-planner` → unsupported visuals or missing figure plan
+- `paper-section-writer` → writing or traceability issues
 
 # Examples
 
-## Example 1: QA fails because a subquestion is unanswered
+## Example 1: QA fails — workflow incomplete (Q2 missing final method)
 
 ```json
 {
@@ -268,16 +376,22 @@ If QA fails, hand off to the relevant upstream skill:
   "final_assembly_allowed": false,
   "blocking_issues": [
     {
-      "issue": "Q3 is not answered in the paper.",
-      "why_it_matters": "Final submission must answer every required subquestion.",
-      "repair_skill": "workflow-orchestrator"
+      "issue": "Q2 has no final method explanation (methods/Q2/q2_final_method_explanation.md missing).",
+      "why_it_matters": "The paper cannot write the Q2 model construction section. Rule 1 violated.",
+      "repair_skill": "final-method-explainer"
     }
   ],
+  "workflow_completeness_check": {
+    "Q1": {"passed": true, "missing": []},
+    "Q2": {"passed": false, "missing": ["final_method_explanation", "final_result_analysis", "solution_package", "robustness_report"]},
+    "Q3": {"passed": false, "missing": ["all"]},
+    "Q4": {"passed": false, "missing": ["all"]}
+  },
   "recommended_next_skill": "workflow-orchestrator"
 }
 ```
 
-## Example 2: QA fails because a claim is unsupported
+## Example 2: QA fails — unsupported claim detected
 
 ```json
 {
@@ -285,7 +399,8 @@ If QA fails, hand off to the relevant upstream skill:
   "final_assembly_allowed": false,
   "unsupported_claims": [
     {
-      "claim": "The proposed prediction model is highly accurate.",
+      "claim": "The prediction model is highly accurate.",
+      "location": "paper/sections/q2.tex",
       "reason": "No error metric or baseline comparison is provided.",
       "repair_skill": "robustness-checker"
     }
@@ -301,7 +416,24 @@ If QA fails, hand off to the relevant upstream skill:
   "qa_status": "passed",
   "final_assembly_allowed": true,
   "blocking_issues": [],
-  "minor_issues": [],
+  "minor_issues": [
+    {
+      "issue": "Figure caption for Q1 Fig.1.3 could be more specific.",
+      "repair_skill": "paper-section-writer"
+    }
+  ],
+  "workflow_completeness_check": {
+    "Q1": {"passed": true, "missing": []},
+    "Q2": {"passed": true, "missing": []},
+    "Q3": {"passed": true, "missing": []},
+    "Q4": {"passed": true, "missing": []}
+  },
+  "three_critical_rules_check": {
+    "Q1": {"all_passed": true},
+    "Q2": {"all_passed": true},
+    "Q3": {"all_passed": true},
+    "Q4": {"all_passed": true}
+  },
   "recommended_next_skill": "workflow-orchestrator"
 }
 ```
