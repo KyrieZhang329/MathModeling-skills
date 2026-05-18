@@ -82,10 +82,15 @@ Use or request:
    - State trade-offs between methods (speed vs accuracy, simplicity vs precision, interpretability vs fit).
    - Do not hide poor performance.
 
-4. Judge result quality.
-   - For each method, state whether results are: `good enough for paper`, `needs improvement`, or `should be dropped`.
+4. Judge result quality and assign archival labels.
+   - For each method, state whether results are: `[CHOSEN]` (good enough — keep in main tree), `[BACKUP]` (keep but secondary), or `[REJECTED]` (drop and archive).
    - Give a concrete reason for each judgment tied to metrics, visual evidence, or method-plan requirements.
-   - If a method's output is clearly wrong (infeasible, contradictory, nonsensical), flag it explicitly.
+   - If a method's output is clearly wrong (infeasible, contradictory, nonsensical), flag it `[REJECTED]` with explicit reason.
+   - **For every `[REJECTED]` method**, move its outputs from the main tree to the archive:
+     - Move `code/Qx/<method>_main.py` (or `.m`) → `workspace/archived/<Qx>/<method>_REJECTED_roundN/`.
+     - Move its outputs in `results/Qx/experiments/roundN/figures/<method>_*` and `tables/<method>_*` → same archive directory.
+     - Leave a one-line breadcrumb in `methods/Qx/qx_method_iteration_log.md` (e.g., "Round 1: M3 [REJECTED] — constraint infeasibility, archived to workspace/archived/Q3/m3_REJECTED_round1/").
+   - The main tree under `code/Qx/` and `results/Qx/experiments/` should contain ONLY `[CHOSEN]` and `[BACKUP]` methods after this step. `[REJECTED]` outputs in the main tree are a workflow defect — they drift into the paper by accident.
 
 5. Decide on iteration.
    - State unambiguously whether this subquestion should:
@@ -140,13 +145,14 @@ Must contain:
 
 ## 2. Per-Method Results
 
-### Method M1: [name]
+### Method M1: [name]  [CHOSEN | BACKUP | REJECTED]
 - **Key outputs**: [numerical summary]
 - **Figures generated**: [list with one-sentence interpretation each]
 - **Tables generated**: [list with one-sentence interpretation each]
 - **Metrics**: [values against expected ranges]
-- **Verdict**: [good enough / needs improvement / should be dropped]
+- **Verdict**: [CHOSEN — keep in main tree / BACKUP — secondary / REJECTED — archived]
 - **Reason**: [concrete evidence-based reason]
+- **Archive action** (only if REJECTED): "Moved code/Qx/m1_main.py and results/Qx/experiments/roundN/figures/m1_*.png to workspace/archived/Qx/m1_REJECTED_roundN/"
 
 ### Method M2: [name]
 ...
@@ -216,7 +222,8 @@ Must contain:
 - Do not list file names without explaining what they contain.
 - Every figure must be interpreted: what pattern, trend, or anomaly does it show?
 - Every table must be interpreted: what is the key takeaway?
-- Every method must receive a clear verdict with an evidence-based reason.
+- Every method must receive a clear verdict (`[CHOSEN] / [BACKUP] / [REJECTED]`) with an evidence-based reason.
+- **`[REJECTED]` methods must be archived**, not just labeled. Move their code and outputs to `workspace/archived/<Qx>/<method>_REJECTED_roundN/`. Leaving them in the main tree is a workflow defect.
 - Comparison must be on explicit criteria, not vague impressions.
 - Poor results must be reported honestly. Do not sugarcoat.
 - If results are insufficient, state exactly what the modeler should reconsider.

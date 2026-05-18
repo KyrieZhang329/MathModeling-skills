@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Project-level hard-rule guardrails. These mirror the user's recurring rules so they don't need to be repeated in every prompt. See CLAUDE.md for the why.",
+  "permissions": {
+    "deny": [
+      "Write(workspace/data_raw/**)",
+      "Edit(workspace/data_raw/**)",
+      "Write(**/frozen_numbers.json)",
+      "Edit(**/frozen_numbers.json)",
+      "Bash(git push --force:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf workspace/data_raw:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(rm -rf:*)",
+      "Write(paper/final.pdf)",
+      "Write(paper/main.tex)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[math-modeling guardrails active] frozen_numbers.json / workspace/data_raw immutable; git push gated; assembly requires audit-layer PASS. See CLAUDE.md for the why.' >&2"
+          }
+        ]
+      }
+    ]
+  }
+}

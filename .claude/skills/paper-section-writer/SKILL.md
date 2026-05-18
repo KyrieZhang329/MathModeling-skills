@@ -30,6 +30,46 @@ Do NOT use this skill:
 - To write final paper sections for Qx when `results/Qx/reports/qx_final_result_analysis.md` is missing.
 - To write final paper sections for Qx when `results/QX/reports/qx_solution_package_for_writer.md` is missing (the writer's primary source).
 
+# Gate G5: Section Quality (NEW — load-bearing for paper external quality)
+
+Beyond the three critical rules (which ensure the right inputs exist), every section drafted by this skill must also pass two output-quality gates before it counts as "drafted". Marketers of completion always claim "已经写完了"; this gate makes "写完" structurally checkable.
+
+## G5.1 Word-count floor (per section type)
+
+Different sections have different minimum substantive lengths. Below these floors, the section is "占位" not "正文":
+
+| Section type | Floor (Chinese chars) | Floor (English words) | Rationale |
+|--------------|-----------------------|------------------------|-----------|
+| Abstract | 200 | 150 | Must cover problem + method + key result + robustness in 4-6 sentences |
+| Problem restatement | 300 | 220 | Background + main goal + subquestions + constraints |
+| Problem analysis | 400 | 280 | Decomposition reasoning + dependency map |
+| Assumptions | 200 | 150 | Each necessary assumption stated with justification |
+| Symbols and definitions | 150 | 100 | Variable list with units; brief |
+| Data preprocessing | 300 | 220 | Sources + cleaning ops + risks |
+| Model construction (per Qx) | 600 | 450 | Assumptions + symbols + math model + procedure + metrics — this is the longest per-Qx section |
+| Model solution (per Qx) | 250 | 180 | Solver + pipeline + computational notes |
+| Results analysis (per Qx) | 500 | 380 | Numerical results + interpretation + baseline comparison + figures referenced |
+| Method selection narrative (per Qx) | 300 | 220 | Eliminated methods + why-this-method |
+| Robustness and sensitivity | 350 | 250 | Stable conclusions + fragile conclusions + perturbation details |
+| Strengths and limitations | 300 | 220 | At least 2 strengths + 2 limitations, each tied to evidence |
+| Conclusion | 300 | 220 | Direct answer per subquestion + key numbers + limitations |
+
+If a section is below floor, the writer must report it as `status: under_floor` and identify what is missing (which subsection lacks substance), NOT pad with filler prose. Filler prose triggers `paper-polisher` rejection later.
+
+## G5.2 Three-Dimension Discussion Rule (per numerical result)
+
+Every numerical result reported in the paper MUST be accompanied by at least **three discussion dimensions** out of:
+
+1. **Sensitivity / robustness** — how does the number change under ±10% perturbation of weights / inputs / parameters? (sourced from `robustness/Qx/qx_robustness_report.md`)
+2. **Physical / domain meaning** — what does the number mean in the real world? Is it large or small? Plausible or surprising?
+3. **Baseline comparison** — how does this number compare to the baseline method's number? (sourced from comparison tables in `qx_final_result_analysis.md`)
+4. **Cross-subquestion consistency** — is this number consistent with related numbers from other subquestions? (e.g., total demand from Q2 should ≈ total allocated from Q3)
+5. **Uncertainty / confidence interval** — what's the confidence range? Standard error? Bootstrap CI?
+
+A bare claim like "RMSE = 2.4" with no discussion fails this gate. The minimum is 3 of the above 5 dimensions; pick whichever are most defensible from evidence.
+
+In the output JSON summary, include a `three_dimension_check` field listing, per numerical claim, which 3 dimensions were covered.
+
 # Three Critical Rules (Enforced as Hard Gates)
 
 This skill MUST enforce these three rules. Violation of any rule means the skill must refuse to write final paper sections and redirect.
@@ -264,6 +304,7 @@ Describe code, extra tables, parameter settings, or supplementary derivations. L
 
 - Write from validated artifacts, not memory or guesswork.
 - The solution package is the primary source — use it first, then verify against detailed sources.
+- **Source every number from `frozen_numbers.json`**, not from raw `qx_final_result_analysis.md` and not from the section drafts themselves. If `frozen_numbers.json` is missing, the section is NOT writable — route to `solution-package-builder`.
 - Keep every major claim traceable to an artifact.
 - Use concise, technical language.
 - Do not write numerical claims without result artifacts.
@@ -274,6 +315,8 @@ Describe code, extra tables, parameter settings, or supplementary derivations. L
 - If evidence is missing, mark the section incomplete and name the missing artifact.
 - If the solution package says a claim is "to avoid or downgrade", respect that.
 - Avoid filler phrases that do not advance the argument.
+- **Word-count floors are not suggestions** — a section under floor is `under_floor`, not "drafted". Do not pad with generic prose to hit the floor; identify the missing subsection instead.
+- **Every numerical result needs ≥ 3 discussion dimensions** (G5.2). A bare number is not a result; it's an isolated digit.
 
 # Rules
 
@@ -292,17 +335,20 @@ Describe code, extra tables, parameter settings, or supplementary derivations. L
 Before handing off, verify:
 
 - Gate check passed for the target subquestion (all three rules satisfied).
+- **Gate G5 passed**: each drafted section is at or above its word-count floor (or marked `under_floor` with identified gap).
+- **Three-dimension discussion check**: each numerical claim has ≥ 3 of {sensitivity, physical meaning, baseline, cross-Qx, uncertainty} discussion dimensions.
 - The solution package was used as the primary source.
 - Every drafted section uses only available artifacts.
-- Every numerical claim is backed by a result file.
+- **Every numerical claim is sourced from `frozen_numbers.json`** (not raw results, not previous drafts).
 - Every figure or table reference maps to the figure-table plan or existing file.
+- Every figure referenced has passed `math-figure-generator`'s `render_check_and_log` (verify by checking `paper/figures/render_check.log`).
 - Every robustness claim maps to a robustness artifact.
 - Every subquestion has a corresponding draft section or is marked incomplete.
 - Assumptions are connected to modeling needs.
 - Variables and notation are defined before use.
 - Limitations are not hidden.
 - Unsupported claims are listed.
-- The next skill is `quality-assurance-auditor`.
+- The next skill is `paper-polisher`, then `consistency-auditor` / `completeness-auditor` / `quality-assurance-auditor` (audit layer).
 
 # Failure modes
 

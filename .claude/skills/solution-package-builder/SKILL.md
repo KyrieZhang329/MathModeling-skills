@@ -105,17 +105,63 @@ Use or request:
    - Include direct quotes from source documents where useful.
    - Include file paths for every referenced artifact.
 
+7.5. **Freeze numerical claims — emit `frozen_numbers.json` (Gate G4 pass criterion).**
+   This is mandatory, not optional. Without freezing, every bug fix in `code/Qx/` silently shifts paper numbers. With freezing, drift is detectable by `consistency-auditor`.
+
+   - Walk the solution package and extract every numerical claim (every value the paper will report).
+   - For each, record provenance: which file (final analysis report / metric file / code constant) it came from, which line, and its frozen value.
+   - Save to `results/Qx/reports/frozen_numbers.json` with this schema:
+     ```json
+     {
+       "subquestion": "Q1",
+       "frozen_at": "2026-05-18T14:22:11+08:00",
+       "frozen_by_skill": "solution-package-builder",
+       "source_method": "entropy-TOPSIS",
+       "code_source_files": [
+         {"path": "code/Q1/q1_main.py", "mtime": "2026-05-17T11:03:22+08:00"}
+       ],
+       "claims": [
+         {
+           "id": "q1_top_score",
+           "label": "Top city score (city A, entropy-TOPSIS)",
+           "value": 0.92,
+           "unit": "score",
+           "precision_for_paper": 2,
+           "source_file": "results/Q1/experiments/final/metrics/topsis_scores.csv",
+           "source_locator": "row=A, column=score",
+           "verified_against": "results/Q1/reports/q1_final_result_analysis.md:section 2"
+         },
+         {
+           "id": "q1_K",
+           "label": "Number of indicators",
+           "value": 30,
+           "unit": "count",
+           "source_file": "code/Q1/q1_main.py",
+           "source_locator": "line 18: K = 30"
+         }
+       ]
+     }
+     ```
+   - The file is **immutable by convention** — once written, do not edit it by hand. To change a frozen number, follow the **解冻 → 修改 → 重冻结** three-step:
+     1. Log the reason for thaw in `results/Qx/reports/freeze_change_log.md` (create if missing, append entries).
+     2. Update the canonical source (code or analysis report) and re-run experiments if needed.
+     3. Re-invoke this skill to regenerate `frozen_numbers.json` with a new `frozen_at` timestamp.
+   - **Staleness invariant**: `frozen_at` MUST be newer than the latest mtime of every file in `code_source_files`. If not, the freeze is stale and `consistency-auditor` will flag it.
+
+   `paper-section-writer` reads numbers from this file, not from raw results. `consistency-auditor` compares paper text against this file. The freeze is the single canonical anchor.
+
 8. Update the workflow status.
    - This subquestion is now "Ready for Writer" (confirmed, not just claimed).
    - Hand off to `paper-section-writer`.
 
 # Outputs
 
-Produce exactly one document:
+Produce two artifacts:
 
-- `results/Qx/reports/qx_solution_package_for_writer.md`
+- `results/Qx/reports/qx_solution_package_for_writer.md` — the human-readable writer-facing package.
+- `results/Qx/reports/frozen_numbers.json` — the immutable numerical snapshot (Gate G4 pass criterion).
 
-This is the ONLY document the paper writer should need to read for this subquestion (they can click through to source files for details).
+The solution package is the document the paper writer reads; `frozen_numbers.json` is the canonical source from which the writer sources every numerical claim. Both must exist; the package without the freeze is incomplete.
 
 # Output format
 
@@ -283,6 +329,8 @@ The solution package MUST contain all of the following sections:
 - Keep the recommendation voice neutral — this package informs the writer, it does not command them.
 - Mark content quality levels: "ready to write as-is", "needs adaptation", "for reference only".
 - If the package reveals that the subquestion is NOT actually Ready for Writer (e.g., key results are missing, major claims are unsupported), report this honestly and recommend returning to the appropriate upstream skill.
+- **`frozen_numbers.json` is mandatory** — without it, Gate G4 fails and the paper writer cannot proceed. The package alone is not enough; the freeze is the canonical anchor.
+- **Never edit `frozen_numbers.json` by hand**. To change a frozen value, walk the `解冻 → 修改 → 重冻结` three-step (log the reason in `freeze_change_log.md`, update the source, re-invoke this skill).
 
 # Verification
 
@@ -296,6 +344,8 @@ Before handing off, verify:
 - Cross-reference file paths are correct.
 - No fabricated content exists.
 - The package completeness checklist is honest.
+- **`results/Qx/reports/frozen_numbers.json` exists** with a valid `frozen_at` timestamp newer than every `code_source_files` mtime (no stale freeze on first emission).
+- Every numerical claim in the package text appears in `frozen_numbers.json` with matching value.
 
 # Failure modes
 

@@ -53,6 +53,15 @@ Use or request:
 
 # Workflow
 
+0. **Granularity alignment (前置颗粒度对齐 — first action on any open-ended request).**
+   Before generating a single candidate, ask the modeler ONE most-load-bearing question. Do not produce a default pool that will need 3 revisions. Pick the question that, if answered, narrows the candidate space the most. Typical choices:
+   - "This problem looks like both evaluation and classification — which output form do you want? (a ranking score, or a discrete category)?"
+   - "Interpretability vs. accuracy — which do you weight more for this contest?"
+   - "Do you have a baseline already in mind, or should I propose one?"
+   - "Implementation target: Python, MATLAB, or 北太天元?"
+
+   If the user has already given the answer in their request, skip this step. Do NOT ask 3 questions — pick the single most important one. Once answered, proceed to step 1.
+
 1. Read the parsed problem, classification, and literature analysis artifacts.
    - Work subquestion by subquestion.
    - Respect dependencies between subquestions.
@@ -77,11 +86,29 @@ Use or request:
      - **Evaluation metric**: How to judge whether this method's output is good.
      - **Implementation difficulty**: easy / medium / hard.
      - **First-round priority**: high (try first) / medium (try if time) / low (backup).
+     - **PoC script (REQUIRED — see step 3.5)**: path to a ≤ 30-line runnable script under `methods/Qx/poc/`.
+     - **Feasibility number (REQUIRED — see step 3.5)**: a concrete result the PoC produced on small-scale data (e.g., "RMSE=2.4 on 50-sample subset", "TSP-50 solved in 0.3s", "LP infeasible — constraint conflict").
 
-4. Reject unsuitable methods explicitly.
+3.5. **Write and run the PoC for every candidate (Gate G2 pass criterion).**
+   This is a hard requirement, not optional. A candidate without a runnable PoC + a feasibility number is NOT a validated candidate — it is a hypothesis. The orchestrator will block code generation (Gate G2) until every candidate has a PoC.
+
+   - For each candidate, write a ≤ 30-line Python or MATLAB script that:
+     - Imports nothing exotic (numpy / scipy / pandas / sklearn for Python; built-in for MATLAB).
+     - Runs the candidate's core math on a **small slice of the actual cleaned data** (e.g., first 50 rows, first 5 cities, downsampled time series). Do NOT use synthetic data — the point is to test feasibility against the real distribution.
+     - Outputs one number (or one verdict). Print it.
+   - Save scripts to `methods/Qx/poc/<candidate_id>_poc.py` (or `.m`).
+   - Run each script and record the number / verdict directly into the candidate's section in `methods/Qx/qx_method_candidates.md` under "Feasibility number".
+   - If a PoC fails (crashes, takes too long, produces infeasible output), mark the candidate `[REJECTED — PoC failed: <reason>]` and move the PoC script to `workspace/archived/<Qx>/<candidate>_REJECTED_poc/`. Do NOT keep failed PoCs in the main `methods/Qx/poc/` directory.
+   - Candidates that survive PoC become `[CHOSEN]` (if first-round priority high) or `[BACKUP]`. The candidate pool emitted from this skill must contain ≥ 1 `[CHOSEN]` candidate.
+
+   The PoC philosophy: "30 lines that fail on real data" is worth more than "5 pages of math that look elegant". Surface infeasibility now, not at code generation.
+
+4. Reject unsuitable methods explicitly + archive them.
    - For each subquestion, identify methods that look tempting but are unsuitable.
    - Give data-driven, time-driven, or interpretability-driven reasons for rejection.
-   - This prevents the team from wasting time on obviously poor choices.
+   - For methods rejected by PoC failure, the PoC script must be moved to `workspace/archived/<Qx>/<method>_REJECTED_poc/` (per step 3.5).
+   - For methods rejected by analysis only (no PoC needed), record a one-line rejection in the rejected table and in `methods/Qx/qx_method_iteration_log.md`. No script to archive.
+   - This prevents the team from wasting time on obviously poor choices, and keeps the main `methods/Qx/poc/` directory containing only `[CHOSEN]` and `[BACKUP]` PoCs.
 
 5. Define baseline requirement.
    - Every subquestion must have at least one baseline method in its candidate pool.
@@ -143,7 +170,7 @@ Each `methods/Qx/qx_method_candidates.md` must follow this structure:
 
 ## 2. Candidate Method Pool
 
-### Candidate M1: [Short Descriptive Name]
+### Candidate M1: [Short Descriptive Name]  [CHOSEN | BACKUP | REJECTED]
 
 - **Math idea**: [2-3 sentences explaining the core mathematical approach]
 - **Why it fits this subquestion**: [1-2 sentences]
@@ -163,6 +190,9 @@ Each `methods/Qx/qx_method_candidates.md` must follow this structure:
 - **Data requirements**: [specific data fields needed]
 - **Literature support**: [reference to paper analysis if applicable, or "no direct literature support"]
 - **Estimated implementation time**: [rough estimate: hours]
+- **PoC script**: `methods/Qx/poc/m1_poc.py` (or `.m`) — ≤ 30 lines, runs on small slice of cleaned data
+- **Feasibility number**: e.g., "RMSE = 2.4 on first 50 samples, runtime 0.3s" (or "PoC failed: matrix singular when n<10" if rejected)
+- **PoC verdict**: PASS (proceed to full implementation) | FAIL → [REJECTED] + archive
 
 ### Candidate M2: [Short Descriptive Name]
 [Same structure]
@@ -373,6 +403,9 @@ Avoid: decorative figures without modeling purpose, causal claims from correlati
 - Each candidate must have a distinct mathematical idea — not just a different library or parameter.
 - Every subquestion must have a baseline candidate designated.
 - Every candidate must specify what the programmer should output and how to evaluate it.
+- **PoC is mandatory** — every candidate must have a runnable ≤ 30-line PoC + a feasibility number. A candidate without a PoC is not a candidate; it's a hypothesis. Gate G2 blocks code generation on PoC absence.
+- **Before generating the pool, ask one most-load-bearing question** to align granularity with the modeler (Workflow step 0). Do not default-produce 3 versions and get them all rejected.
+- **PoC failures must be archived**, not buried. Move failed PoC scripts to `workspace/archived/<Qx>/<candidate>_REJECTED_poc/` and mark the candidate `[REJECTED]` with a one-line reason. The main `methods/Qx/poc/` directory contains only `[CHOSEN]` and `[BACKUP]` PoCs.
 - Unsuitable methods must be explicitly rejected with reasons.
 - First-round priority must be stated — the team should know what to implement first.
 - Do not select the final method. This is the candidate pool, not the final choice.
@@ -390,7 +423,9 @@ Before handing off, verify:
 
 - Every subquestion has 2-4 candidate methods or an explicit justification for fewer.
 - Every subquestion has a baseline designated.
-- Every candidate has: math idea, strengths, weaknesses, expected outputs, evaluation criteria, difficulty, priority.
+- Every candidate has: math idea, strengths, weaknesses, expected outputs, evaluation criteria, difficulty, priority, **PoC script path, feasibility number, PoC verdict**.
+- At least one candidate is marked `[CHOSEN]` with a PoC PASS verdict per subquestion.
+- All `[REJECTED]` PoCs have been moved to `workspace/archived/`.
 - Unsuitable methods are explicitly listed and rejected with reasons.
 - First-round execution recommendation is clear.
 - Cross-method comparison matrix is filled for all criteria.

@@ -8,9 +8,23 @@ license: MIT
 
 Coordinate the full mathematical modeling contest workflow from problem intake to final QA.
 
-This skill does not solve models, write code, generate figures, or draft paper sections directly. Its role is to inspect the current project state across ALL subquestions, track per-question progress through a defined state machine, identify missing or blocked artifacts, enforce workflow gates (including the three critical rules), and decide the next appropriate skill to use.
+This skill is a **gate-driven scheduler**, not a stage-sequential scheduler. The difference matters: a stage scheduler answers "what stage are we in, what's the next stage?" — which lets work advance even when the current stage's outputs are unreliable. A gate-driven scheduler answers "does the current stage's gate pass — and if not, what's the fallback?" — which prevents drift from propagating downstream.
+
+This skill does not solve models, write code, generate figures, or draft paper sections directly. Its role is to inspect the current project state across ALL subquestions, track per-question progress through a defined state machine, identify missing or blocked artifacts, **evaluate each workflow gate against its enter_condition / pass_criteria / fail_fallback contract**, route to the independent audit layer (consistency-auditor + completeness-auditor + quality-assurance-auditor) before final assembly, and decide the next appropriate skill to use.
 
 This skill is the single source of truth for "what should we do next?"
+
+# Session-Start Environment Ping (MUST run first in any new session)
+
+Before doing any orchestration work in a fresh session, ping the environment so downstream skills don't fail with surprises:
+
+1. **Working tree status**: `git status --short`. If dirty (uncommitted changes, untracked files), surface the dirty files to the user before proceeding. Dirty working tree from a collaborator's in-progress work is the most common "git status looks weird" cause — flag it; do not silently work around it.
+2. **Python availability**: `python --version` (or `python3 --version`). Flag if missing or wrong version.
+3. **MATLAB / 北太天元 availability**: only when any Qx targets MATLAB. Check with `which matlab` or `command -v matlab`; if missing, report "MATLAB not in PATH — confirm 北太天元 will be used or switch implementation target to Python".
+4. **Required scientific packages** (only when Python is the target): `python -c "import numpy, pandas, matplotlib"` — flag missing packages.
+5. **Workspace skeleton**: verify `planning/`, `methods/`, `code/`, `results/`, `robustness/`, `paper/`, `workspace/data_raw/` exist (or create them with a single `mkdir -p` if the user just initialized the project).
+
+Report the environment ping result in the very first response of a new session. **Do not start state-machine work** until the user has seen this report, since downstream skills will silently fail if the environment isn't there. A two-line summary is enough: "Env OK: Python 3.11, MATLAB found, working tree clean" or "Env WARN: MATLAB missing, working tree has 3 uncommitted files in code/Q2/".
 
 # When to use
 
@@ -63,16 +77,17 @@ Inspect or request the following, depending on availability:
 
 2. Determine each subquestion's status using the per-question state machine (see below).
 
-3. Enforce workflow gates.
+3. Enforce workflow gates (see "Workflow Gates" section below for the enter_condition / pass_criteria / fail_fallback contract of each gate).
    - Global gates (apply to all subquestions):
      - Do not allow method selection before problem parsing and classification.
      - Do not allow code generation before a validated method plan exists.
      - Do not allow paper claims before model results exist.
-     - Do not allow final assembly before QA passes.
+     - Do not allow final assembly before the three-auditor layer (consistency-auditor → completeness-auditor → quality-assurance-auditor) all pass.
    - Per-subquestion gates (the three critical rules):
      - Rule 1: Do not allow paper writing for Qx before `methods/Qx/qx_final_method_explanation.md` exists.
      - Rule 2: Do not allow writer handoff for Qx before `results/Qx/reports/qx_final_result_analysis.md` exists.
      - Rule 3: The paper writer should use `results/Qx/reports/qx_solution_package_for_writer.md` as primary source; if missing, Qx is NOT Ready for Writer.
+   - **Gate failure propagation**: When any gate fails for Qx at stage N, mark all downstream Qx artifacts (stages > N) as DIRTY in the progress dashboard. Existing files at stages > N are not automatically valid just because they exist on disk — they may be downstream of a number that was wrong upstream.
 
 4. Identify missing or blocked artifacts.
    - Mark missing files explicitly.
@@ -94,6 +109,75 @@ Inspect or request the following, depending on availability:
    - Include the progress dashboard.
    - Include next skill recommendation.
    - Do not perform the downstream skill's work inside this skill.
+
+# Workflow Gates (enter_condition / pass_criteria / fail_fallback)
+
+Each gate is a hard checkpoint with three explicit parts. Do not skip a gate; do not advance on partial satisfaction. The state machine and the gates run together — the state machine says "what stage am I in", the gates say "can I leave this stage".
+
+## Gate G1: PROBLEM_PARSED
+- **enter_condition**: User provides a problem statement (file or text).
+- **pass_criteria**:
+  - `planning/parse/` exists with goals / objects / constraints / data / outputs / subquestions filled.
+  - `planning/classification/` exists with primary task type per Qx.
+- **fail_fallback**: Route to `problem-parser` then `problem-classifier`. Do not advance to G2.
+
+## Gate G2: METHOD_VALIDATED  (load-bearing — most-violated boundary)
+This is the method→code boundary. Most "漂亮方案到代码阶段才崩" issues happen because G2 was treated as soft.
+- **enter_condition**: G1 passed; `data-auditor-cleaner` ran; `planning/symbol_table.md` and `planning/model_assumptions.md` exist.
+- **pass_criteria**:
+  - `methods/Qx/qx_method_candidates.md` exists with 2-4 candidates.
+  - Every candidate has a runnable ≤30-line PoC script saved under `methods/Qx/poc/` AND a small-scale feasibility result (a number, a runtime, or a "fails on this data" verdict). A candidate without a PoC counts as "not yet validated".
+  - Every candidate has a baseline designation or one of the candidates IS the baseline.
+- **fail_fallback**: Route to `method-selector` to add the missing PoC. If PoC feasibility fails for a candidate, mark it `[REJECTED]`, move the PoC script to `workspace/archived/`, and route back to `method-selector` for an alternative.
+
+## Gate G3: CODE_REVIEWED
+- **enter_condition**: G2 passed; `code/Qx/` (Python) or `code/matlab/Qx/` (MATLAB) has scripts; experiments ran.
+- **pass_criteria**:
+  - Code-reviewer artifact exists at `code/Qx/reviews/qx_python_review.md` or `code/matlab/Qx/reviews/qx_matlab_review.md` with ≥ 5 explicit pass items.
+  - Scripts produced `results/Qx/experiments/roundN/` with `run_summary.json` and at least one figures/tables/metrics file.
+- **fail_fallback**: Route to `<lang>-code-reviewer`. If the review is insufficient (< 5 pass items), route back to the same reviewer with `completeness-auditor`'s gap report attached.
+
+## Gate G4: RESULTS_FROZEN  (load-bearing — second-most-violated boundary)
+This is the results→paper boundary. Most "论文里数字与最新 results 错位" issues happen because G4 was treated as soft.
+- **enter_condition**: G3 passed; modeler confirmed final method; `results/Qx/reports/qx_final_result_analysis.md` exists.
+- **pass_criteria**:
+  - `results/Qx/reports/frozen_numbers.json` exists with a `frozen_at` timestamp.
+  - `frozen_numbers.json` is newer than the last modification time of every `code/Qx/` file it references (no stale freeze).
+  - `results/Qx/reports/qx_solution_package_for_writer.md` exists.
+  - Every numerical claim in the solution package is sourced from `frozen_numbers.json`.
+- **fail_fallback**: Route to `solution-package-builder` to (re-)freeze. After freeze, if `consistency-auditor` later detects drift, route to the **解冻 → 修改 → 重冻结** three-step:
+  1. Modeler/programmer confirms which value is now canonical.
+  2. Update the canonical source (code or analysis report).
+  3. Re-run `solution-package-builder` to re-freeze. Do not edit `frozen_numbers.json` by hand.
+
+## Gate G5: PAPER_SECTION_READY
+- **enter_condition**: G4 passed; `paper/sections/qx.tex` exists.
+- **pass_criteria**:
+  - Section meets the word-count floor declared by `paper-section-writer` (per section type).
+  - Every numerical result in the section has ≥ 3 discussion dimensions covered (sensitivity / physical meaning / baseline comparison).
+  - Every figure referenced exists on disk and has passed `math-figure-generator`'s render-check.
+- **fail_fallback**: Route to `paper-section-writer` with the missing-dimensions list. If figures fail render-check, route to `math-figure-generator`.
+
+## Gate G6: AUDIT_LAYER_PASSED  (the final gate before assembly)
+This is the independent-audit gate. No single skill's "完成" claim can bypass it.
+- **enter_condition**: G5 passed for all Qx; paper sections drafted; references managed.
+- **pass_criteria** (all three independent audits must PASS):
+  - `paper/audits/cross_media_consistency_audit.md` — verdict PASSED.
+  - `paper/audits/completeness_audit.md` — verdict PASSED.
+  - `paper/qa_report.md` — verdict PASSED.
+- **fail_fallback**: Route to whichever auditor failed. Never approve `final_assembly_allowed=true` on partial audit. The three auditors are orthogonal — passing one does not imply the others.
+
+## Gate dependency graph
+
+```
+G1 → G2 → G3 → G4 → G5 → G6 → final assembly
+                              ↑
+                              consistency-auditor ┐
+                              completeness-auditor├─ all must PASS
+                              quality-assurance-auditor ┘
+```
+
+A failure at any gate marks all downstream stages DIRTY. Re-passing a gate after repair requires re-running the gate's pass_criteria check from scratch, not trusting cached "✅" marks.
 
 # Per-Question State Machine
 
@@ -257,11 +341,18 @@ paper-section-writer → paper/sections/qx.tex
     ↓
 【11】建模手审核 → 【12】编程手审核
     ↓
-【13】全题QA
-quality-assurance-auditor → paper/qa_report.md
-    ↓
+【13】独立审计层 (NEW — three orthogonal audits, all must PASS to advance)
+  ├─ consistency-auditor   → paper/audits/cross_media_consistency_audit.md
+  ├─ completeness-auditor  → paper/audits/completeness_audit.md
+  └─ quality-assurance-auditor → paper/qa_report.md
+    ↓ (only if all three PASS — Gate G6)
 【14】终稿组装
 Final assembly of main.tex + sections + figures → paper/final.pdf
+
+If any of the three audits FAIL:
+  → route to the failed auditor's recommended repair skill
+  → re-run the failed audit after repair
+  → never advance to 【14】 on partial audit
 ```
 
 # The Three Critical Rules (Enforced Here)
@@ -444,7 +535,9 @@ If a JSON block is too rigid for the situation, use a concise Markdown report wi
 - Do not fabricate missing artifacts.
 - Do not infer completion without evidence.
 - Do not skip workflow gates for speed.
-- Do not approve final delivery without QA.
+- Do not approve final delivery without the full audit layer passing (Gate G6 — consistency + completeness + QA all green).
+- Do not treat any one auditor's "✅" as sufficient for assembly — the three are orthogonal.
+- Run the session-start environment ping in every new session before doing anything else.
 - Enforce the three critical rules at every handoff.
 - Track per-question status separately — different subquestions are at different stages.
 - Update the progress dashboard whenever the state changes.
@@ -520,10 +613,15 @@ Typical handoff order (global, then per-question):
 15. `solution-package-builder`
 16. `paper-section-writer`
 17. **Modeler review → Programmer review**
-18. `quality-assurance-auditor`
-19. Back to `workflow-orchestrator` for final assembly
+18. `reference-manager` (verify citations are real)
+19. `paper-polisher` (style / hedging / formula consistency within paper)
+20. **Independent audit layer (Gate G6 — three orthogonal audits, all must PASS):**
+    - `consistency-auditor` (cross-media numbers / files / symbols / parameters)
+    - `completeness-auditor` (every claimed completion has a substantive artifact on disk)
+    - `quality-assurance-auditor` (workflow completeness + three critical rules + anti-fabrication + paper quality)
+21. Back to `workflow-orchestrator` for final assembly (only when Gate G6 passes)
 
-If the workflow is complete and QA has passed, hand off to final assembly or user review.
+If the workflow is complete and **all three audits pass**, hand off to final assembly or user review. A single auditor "✅" is NOT sufficient — the three are orthogonal and must converge.
 
 # Examples
 

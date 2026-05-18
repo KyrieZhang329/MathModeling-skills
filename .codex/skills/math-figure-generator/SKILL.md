@@ -82,6 +82,136 @@ def save_figure(fig, filename, formats=None, dpi=300):
     return saved
 ```
 
+## Render-check (mandatory after every save before marking Type 3/4)
+
+Every figure that will appear in the paper (Type 3 论文图 or Type 4 附录图) MUST pass render-check before being committed. This catches the "文字遮挡 / 出界 / 字号过小" defects that otherwise slip into final delivery. Run this immediately after `save_figure()`; on failure, **do not** copy the figure to `paper/figures/`.
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+import json
+
+def render_check(fig, figure_path, min_fontsize_pt=6.5, overlap_tolerance_px=2):
+    """Render-time QA. Returns (passed: bool, issues: list[dict]).
+
+    Checks (in order):
+      1. Every text artist's font size ≥ min_fontsize_pt.
+      2. Every text artist's bbox is fully inside the figure canvas (no clipping).
+      3. No two text artists overlap by more than overlap_tolerance_px pixels.
+      4. Every axes has at least one tick label and a non-empty xlabel/ylabel
+         (or an explicit ax._suppress_label_check=True override).
+      5. Saved file on disk is non-zero bytes.
+
+    Always call AFTER `fig.canvas.draw()` (or after savefig — savefig draws first).
+    """
+    issues = []
+    renderer = fig.canvas.get_renderer()
+    fig_bbox = fig.bbox  # in display pixels
+
+    # 1 & 2: font size + clipping
+    text_artists = []
+    for ax in fig.get_axes():
+        text_artists.extend(ax.texts)
+        text_artists.extend([ax.title, ax.xaxis.label, ax.yaxis.label])
+        text_artists.extend(ax.get_xticklabels())
+        text_artists.extend(ax.get_yticklabels())
+        if ax.get_legend():
+            text_artists.extend(ax.get_legend().get_texts())
+
+    bboxes_for_overlap = []
+    for t in text_artists:
+        if t is None or not t.get_text():
+            continue
+        try:
+            fs = t.get_fontsize()
+            if fs < min_fontsize_pt:
+                issues.append({
+                    'kind': 'fontsize_too_small',
+                    'text': t.get_text()[:40],
+                    'fontsize': fs,
+                    'threshold': min_fontsize_pt,
+                })
+            bbox = t.get_window_extent(renderer=renderer)
+            if not fig_bbox.contains(bbox.x0, bbox.y0) or not fig_bbox.contains(bbox.x1, bbox.y1):
+                issues.append({
+                    'kind': 'text_out_of_canvas',
+                    'text': t.get_text()[:40],
+                    'bbox': [bbox.x0, bbox.y0, bbox.x1, bbox.y1],
+                })
+            bboxes_for_overlap.append((t.get_text()[:40], bbox))
+        except Exception:
+            # text not yet rendered (e.g., legend before draw); skip
+            pass
+
+    # 3: overlap detection (O(n^2), fine for typical figures)
+    for i in range(len(bboxes_for_overlap)):
+        for j in range(i + 1, len(bboxes_for_overlap)):
+            (t1, b1), (t2, b2) = bboxes_for_overlap[i], bboxes_for_overlap[j]
+            # bbox overlap test with tolerance
+            if (b1.x0 < b2.x1 - overlap_tolerance_px and
+                b1.x1 > b2.x0 + overlap_tolerance_px and
+                b1.y0 < b2.y1 - overlap_tolerance_px and
+                b1.y1 > b2.y0 + overlap_tolerance_px):
+                issues.append({
+                    'kind': 'text_overlap',
+                    'text_a': t1,
+                    'text_b': t2,
+                })
+
+    # 4: axes labels present
+    for ax in fig.get_axes():
+        if getattr(ax, '_suppress_label_check', False):
+            continue
+        if not ax.get_xlabel() and ax.get_xticks().size > 0:
+            issues.append({'kind': 'missing_xlabel', 'axes': str(ax)})
+        if not ax.get_ylabel() and ax.get_yticks().size > 0:
+            issues.append({'kind': 'missing_ylabel', 'axes': str(ax)})
+
+    # 5: file on disk
+    p = Path(figure_path)
+    if not p.exists() or p.stat().st_size == 0:
+        issues.append({'kind': 'file_missing_or_empty', 'path': str(p)})
+
+    passed = len(issues) == 0
+    return passed, issues
+
+
+def render_check_and_log(fig, figure_path, log_path='paper/figures/render_check.log', **kw):
+    """Wrapper that appends to a log file. Use this for every Type 3 / Type 4 figure."""
+    fig.canvas.draw()
+    passed, issues = render_check(fig, figure_path, **kw)
+    log_entry = {
+        'figure': str(figure_path),
+        'passed': passed,
+        'issues': issues,
+    }
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, 'a') as f:
+        f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
+    if not passed:
+        print(f"[render_check FAILED] {figure_path}")
+        for issue in issues:
+            print(f"  - {issue}")
+    return passed
+```
+
+**Usage pattern (every Type 3 / Type 4 figure)**:
+
+```python
+saved_paths = save_figure(fig, 'paper/figures/q1_ranking.svg')
+if not render_check_and_log(fig, saved_paths[0]):
+    # Do NOT promote to Type 3. Fix and re-render.
+    raise RuntimeError("render_check failed — see paper/figures/render_check.log")
+```
+
+**Tuning guidance**:
+- `min_fontsize_pt=6.5` for journal-column figures, `min_fontsize_pt=9` for slides.
+- For figures with intentional small annotations (e.g., dense heatmaps), set `min_fontsize_pt=5` and document why.
+- For figures where overlap is intentional (e.g., violin-plot inner box overlapping with median line), wrap the overlap check or mark the specific axis with `ax._suppress_label_check = True` and note the exemption in the caption.
+
+`render_check_and_log` appends to `paper/figures/render_check.log` — `consistency-auditor` and `quality-assurance-auditor` use this log to verify that every Type 3 figure passed before assembly.
+
 ## Color palettes
 
 ### Semantic palette (default)
@@ -398,6 +528,7 @@ Before handing off a figure:
 - [ ] Source data path is recorded.
 - [ ] Figure is assigned to a paper section (or marked as diagnostic/internal).
 - [ ] `plt.close(fig)` after save.
+- [ ] **render_check passed** — `render_check_and_log(fig, path)` returned True; entry written to `paper/figures/render_check.log`. No font < 6.5pt; no text out of canvas; no text overlap; no missing axis labels.
 
 ## When to use this skill
 
@@ -435,3 +566,4 @@ Use when:
 - Do not create decorative figures that don't support a specific claim.
 - Close every figure after saving.
 - For multi-panel figures, the hero panel should be visually dominant.
+- **Every Type 3 (论文图) and Type 4 (附录图) figure MUST pass `render_check_and_log()` before being copied to `paper/figures/`.** A failed render_check blocks promotion. This is enforced by Gate G5 (paper-section-writer) and Gate G6 (audit layer). Type 1 (诊断图) and Type 2 (对比图 internal-use) are exempt unless explicitly promoted to paper.

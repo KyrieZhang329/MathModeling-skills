@@ -139,20 +139,23 @@ Use or request:
     - Do not refactor broadly.
     - Do not change the mathematical model.
 
-11. Produce a review report.
+11. **Produce a review report — MANDATORY substantive file on disk.**
     - State reviewed scripts.
-    - State fixed issues.
+    - **List ≥ 5 explicit pass items** (concrete checks that ran and passed, each citing the file/line and what was verified). Generic statements like "code is correct" or "all checks passed" do NOT count.
+    - List failed checks with file:line and suggested repair.
+    - State fixed issues (what this skill changed surgically).
     - State unresolved risks.
     - State run instructions.
     - State expected outputs.
     - Recommend the next skill.
+    - **If fewer than 5 explicit pass items can be listed**, the review is not substantive — return `status: not_run` and report which checks could not be performed (missing data, missing method plan, etc.). Do NOT pad the list with generic statements.
 
 # Outputs
 
-Produce reviewed Python code artifacts and a review summary such as:
+Produce reviewed Python code artifacts and a **mandatory review file**:
 
-- corrected `.py` scripts under `workspace/code/python/`
-- `workspace/code/code-review/python_review_summary.md`
+- corrected `.py` scripts under `code/Qx/` (matching CLAUDE.md workspace convention).
+- **`code/Qx/reviews/qx_python_review.md`** — REQUIRED. This is the artifact `completeness-auditor` will check for existence and pass-item count. Create the `reviews/` directory if missing.
 - updated run instructions
 - fixed issue list
 - remaining dependency or portability risks
@@ -160,45 +163,61 @@ Produce reviewed Python code artifacts and a review summary such as:
 - expected figure paths
 - recommended next skill
 
+(Legacy path `workspace/code/code-review/python_review_summary.md` is deprecated. New runs must write to `code/Qx/reviews/qx_python_review.md`.)
+
 # Output format
 
-Prefer this JSON-compatible summary:
+The mandatory `code/Qx/reviews/qx_python_review.md` file MUST follow this template:
 
-```json
-{
-  "python_code_review_summary": {
-    "implementation_target": "python",
-    "status": "passed_with_warnings",
-    "reviewed_scripts": [
-      "workspace/code/python/Q1/q1_baseline.py",
-      "workspace/code/python/Q1/q1_main.py"
-    ],
-    "fixed_issues": [
-      {
-        "type": "path_error",
-        "file": "workspace/code/python/Q1/q1_main.py",
-        "change": "Replaced an absolute input path with DATA_DIR / 'clean_data.csv'."
-      }
-    ],
-    "remaining_risks": [
-      "Column names should be checked if the data audit report changes."
-    ],
-    "run_instructions": [
-      "python workspace/code/python/Q1/q1_baseline.py",
-      "python workspace/code/python/Q1/q1_main.py"
-    ],
-    "expected_outputs": [
-      "workspace/results/q1_baseline_results.csv",
-      "workspace/results/q1_main_results.csv",
-      "workspace/figures/q1_ranking.png"
-    ],
-    "markdown_summary": "workspace/code/code-review/python_review_summary.md",
-    "recommended_next_skill": "robustness-checker"
-  }
-}
+```markdown
+# Qx Python Code Review
+
+> **Status**: passed / passed_with_warnings / failed
+> **Reviewer**: python-code-reviewer
+> **Date**: [timestamp]
+> **Scripts reviewed**: [list of .py paths]
+
+## Pass Items (≥ 5 REQUIRED — concrete, file:line cited)
+
+1. ✅ `code/Q1/q1_main.py:14` reads cleaned data from `workspace/data_clean/clean_data.csv` (matches data audit field mapping).
+2. ✅ `code/Q1/q1_main.py:42` uses `K=30` matching `methods/Q1/q1_final_method_explanation.md`.
+3. ✅ `code/Q1/q1_main.py:67` writes ranking to `results/Q1/experiments/round1/tables/ranking.csv` — output saved, not printed.
+4. ✅ `code/Q1/q1_baseline.py` implements the designated baseline (equal-weight scoring) per method plan.
+5. ✅ All scripts set `SEED = 2026` for reproducibility (`q1_main.py:8`, `q1_baseline.py:6`).
+6. ✅ No raw data file under `workspace/data_raw/` is opened in write mode.
+7. ✅ ...
+
+## Failed / Repaired Items
+
+| # | File:line | Issue | Action taken | Status |
+|---|-----------|-------|--------------|--------|
+| 1 | code/Q1/q1_main.py:23 | absolute path `/Users/zhnnky/...` | replaced with `DATA_DIR / 'clean_data.csv'` | fixed |
+| 2 | code/Q2/q2_main.py:88 | scaler fit on full dataset before train-test split (leakage) | NOT fixed — requires method change | blocked → method-selector |
+
+## Remaining Risks
+
+- [risk 1 with file:line and mitigation suggestion]
+
+## Run Instructions
+
+```
+python code/Q1/q1_baseline.py
+python code/Q1/q1_main.py
 ```
 
-If JSON is too rigid, use a concise Markdown report with the same fields.
+## Expected Outputs
+
+- `results/Q1/experiments/round1/tables/ranking.csv`
+- `results/Q1/experiments/round1/figures/q1_ranking.png`
+- `results/Q1/experiments/round1/run_summary.json`
+
+## Recommended Next Skill
+
+- `result-report-generator` (if scripts ran and produced outputs)
+- OR `robustness-checker` (if results already reported)
+```
+
+JSON summary is acceptable for handoff but the markdown file at `code/Qx/reviews/qx_python_review.md` is still required.
 
 # Python review checklist
 
@@ -313,6 +332,8 @@ Check at least the following.
 - Do not add heavy dependencies.
 - Do not ignore dependency or portability notes.
 - Do not claim the code is correct if scripts are not runnable or outputs are not traceable.
+- Do not declare "completion" without writing `code/Qx/reviews/qx_python_review.md` to disk with ≥ 5 explicit pass items. A verbal "passed" is not a review — `completeness-auditor` will flag it as MISSING.
+- Do not pad the pass list with generic statements. If you cannot list 5 concrete checks, report `status: not_run` instead of faking the list.
 - Mark remaining risks explicitly.
 
 # Verification
@@ -327,12 +348,13 @@ Before handing off, verify:
 - Baseline outputs exist or are explicitly blocked.
 - Main model outputs exist or are explicitly blocked.
 - Randomness is controlled where relevant.
-- Results are saved under `workspace/results/`.
-- Figures are saved under `workspace/figures/`.
+- Results are saved under `results/Qx/experiments/roundN/` (per CLAUDE.md workspace convention).
+- Figures are saved under `results/Qx/experiments/roundN/figures/`.
 - Dependency and portability risks are listed.
 - Fixed issues are documented.
 - Remaining risks are documented.
-- The next skill is `robustness-checker` if code is usable.
+- **`code/Qx/reviews/qx_python_review.md` exists on disk with ≥ 5 explicit pass items** (this is what `completeness-auditor` will check — verbal completion does not count).
+- The next skill is `result-report-generator` or `robustness-checker` if code is usable.
 
 # Failure modes
 

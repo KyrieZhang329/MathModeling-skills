@@ -126,20 +126,23 @@ Use or request:
    - Do not refactor broadly.
    - Do not change the mathematical model.
 
-10. Produce a review report.
+10. **Produce a review report — MANDATORY substantive file on disk.**
     - State reviewed scripts.
-    - State fixed issues.
+    - **List ≥ 5 explicit pass items** (concrete checks that ran and passed, each citing file:line and what was verified). Generic statements ("looks good", "no issues") do NOT count.
+    - List failed checks with file:line and suggested repair.
+    - State fixed issues (what this skill changed surgically).
     - State unresolved risks.
     - State run instructions.
     - State expected outputs.
     - Recommend the next skill.
+    - **If fewer than 5 explicit pass items can be listed**, the review is not substantive — return `status: not_run`. Do NOT pad with generic statements.
 
 # Outputs
 
-Produce reviewed MATLAB code artifacts and a review summary such as:
+Produce reviewed MATLAB code artifacts and a **mandatory review file**:
 
-- corrected `.m` scripts under `workspace/code/matlab/`
-- `workspace/code/code-review/matlab_review_summary.md`
+- corrected `.m` scripts under `code/matlab/Qx/` (matching CLAUDE.md workspace convention).
+- **`code/matlab/Qx/reviews/qx_matlab_review.md`** — REQUIRED. This is the artifact `completeness-auditor` will check for existence and pass-item count. Create the `reviews/` directory if missing.
 - updated run instructions
 - fixed issue list
 - remaining compatibility risks
@@ -147,45 +150,60 @@ Produce reviewed MATLAB code artifacts and a review summary such as:
 - expected figure paths
 - recommended next skill
 
+(Legacy path `workspace/code/code-review/matlab_review_summary.md` is deprecated. New runs must write to `code/matlab/Qx/reviews/qx_matlab_review.md`.)
+
 # Output format
 
-Prefer this JSON-compatible summary:
+The mandatory `code/matlab/Qx/reviews/qx_matlab_review.md` file MUST follow this template:
 
-```json
-{
-  "matlab_code_review_summary": {
-    "implementation_target": "matlab",
-    "status": "passed_with_warnings",
-    "reviewed_scripts": [
-      "workspace/code/matlab/Q1/q1_baseline.m",
-      "workspace/code/matlab/Q1/q1_main.m"
-    ],
-    "fixed_issues": [
-      {
-        "type": "path_error",
-        "file": "workspace/code/matlab/Q1/q1_main.m",
-        "change": "Replaced an absolute input path with fullfile('workspace','data_clean','clean_data.csv')."
-      }
-    ],
-    "remaining_risks": [
-      "北太天元 compatibility should be checked if the local environment lacks writematrix."
-    ],
-    "run_instructions": [
-      "Run workspace/code/matlab/Q1/q1_baseline.m",
-      "Run workspace/code/matlab/Q1/q1_main.m"
-    ],
-    "expected_outputs": [
-      "workspace/results/q1_baseline_results.csv",
-      "workspace/results/q1_main_results.csv",
-      "workspace/figures/q1_ranking.png"
-    ],
-    "markdown_summary": "workspace/code/code-review/matlab_review_summary.md",
-    "recommended_next_skill": "robustness-checker"
-  }
-}
+```markdown
+# Qx MATLAB Code Review
+
+> **Status**: passed / passed_with_warnings / failed
+> **Reviewer**: matlab-code-reviewer
+> **Date**: [timestamp]
+> **Scripts reviewed**: [list of .m paths]
+> **Compatibility target**: MATLAB / 北太天元
+
+## Pass Items (≥ 5 REQUIRED — concrete, file:line cited)
+
+1. ✅ `code/matlab/Q1/q1_main.m:8` reads cleaned data via `readtable(fullfile('workspace','data_clean','clean_data.csv'))`.
+2. ✅ `code/matlab/Q1/q1_main.m:24` weight vector `w (1×6)` matches indicator count from data audit.
+3. ✅ `code/matlab/Q1/q1_main.m:53` calls `writetable` to save ranking → output saved, not just displayed.
+4. ✅ `rng(2026)` is set at line 6 → reproducibility ensured.
+5. ✅ No App Designer / Live Script / Simulink dependencies → 北太天元 compatible.
+6. ✅ ...
+
+## Failed / Repaired Items
+
+| # | File:line | Issue | Action taken | Status |
+|---|-----------|-------|--------------|--------|
+| 1 | code/matlab/Q1/q1_main.m:17 | absolute path | replaced with relative path | fixed |
+| 2 | code/matlab/Q3/q3_main.m:42 | uses `fmincon` (Optimization Toolbox) | NOT fixed — requires method change | blocked → method-selector |
+
+## Remaining Risks
+
+- [risk 1 with file:line]
+
+## Run Instructions
+
+```
+Run code/matlab/Q1/q1_baseline.m
+Run code/matlab/Q1/q1_main.m
 ```
 
-If JSON is too rigid, use a concise Markdown report with the same fields.
+## Expected Outputs
+
+- `results/Q1/experiments/round1/tables/ranking.csv`
+- `results/Q1/experiments/round1/figures/q1_ranking.png`
+- `results/Q1/experiments/round1/run_summary.json`
+
+## Recommended Next Skill
+
+- `result-report-generator` or `robustness-checker`
+```
+
+JSON summary is acceptable for handoff but the markdown file at `code/matlab/Qx/reviews/qx_matlab_review.md` is still required.
 
 # MATLAB / 北太天元 review checklist
 
@@ -287,6 +305,8 @@ Check at least the following.
 - Do not add heavy toolbox dependencies.
 - Do not ignore MATLAB / 北太天元 compatibility notes.
 - Do not claim the code is correct if scripts are not runnable or outputs are not traceable.
+- Do not declare "completion" without writing `code/matlab/Qx/reviews/qx_matlab_review.md` to disk with ≥ 5 explicit pass items. A verbal "passed" is not a review — `completeness-auditor` will flag it as MISSING.
+- Do not pad the pass list with generic statements. If you cannot list 5 concrete checks, report `status: not_run`.
 - Mark remaining risks explicitly.
 
 # Verification
@@ -301,12 +321,13 @@ Before handing off, verify:
 - Baseline outputs exist or are explicitly blocked.
 - Main model outputs exist or are explicitly blocked.
 - Randomness is controlled where relevant.
-- Results are saved under `workspace/results/`.
-- Figures are saved under `workspace/figures/`.
+- Results are saved under `results/Qx/experiments/roundN/` (per CLAUDE.md workspace convention).
+- Figures are saved under `results/Qx/experiments/roundN/figures/`.
 - MATLAB / 北太天元 compatibility risks are listed.
 - Fixed issues are documented.
 - Remaining risks are documented.
-- The next skill is `robustness-checker` if code is usable.
+- **`code/matlab/Qx/reviews/qx_matlab_review.md` exists on disk with ≥ 5 explicit pass items** (this is what `completeness-auditor` will check — verbal completion does not count).
+- The next skill is `result-report-generator` or `robustness-checker` if code is usable.
 
 # Failure modes
 

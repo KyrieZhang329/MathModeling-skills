@@ -8,11 +8,17 @@ license: MIT
 
 Audit the complete mathematical modeling contest solution before final submission.
 
-This skill checks whether the solution answers every subquestion, whether models, code, results, figures, robustness checks, and paper sections are mutually consistent, whether the full workflow completeness requirements are met, and whether unsupported claims or missing artifacts block final delivery.
+This skill is the **third of three independent auditors** that together form Gate G6. It runs after `consistency-auditor` and `completeness-auditor` and consumes their reports as inputs — it does NOT re-do their checks. Each auditor catches a different failure mode:
 
-This skill checks BOTH paper quality AND workflow completeness. It verifies that every subquestion has gone through the full delivery chain: candidate methods → experiments → final method explanation → final result analysis → solution package → paper sections.
+- `consistency-auditor` → cross-media numbers / files / symbols / parameters (does the paper claim match the code?)
+- `completeness-auditor` → audit/review files exist on disk with ≥ 5 pass items (did the producer skills actually write what they claimed?)
+- **`quality-assurance-auditor` (this skill)** → workflow completeness, three critical rules, anti-fabrication, paper quality (is the whole pipeline coherent and defensible?)
 
-This skill does not invent missing results, rewrite the full paper, rerun models, or approve submission when evidence is incomplete.
+This skill checks whether the solution answers every subquestion, whether models / code / results / figures / robustness checks / paper sections are mutually coherent, whether the full workflow completeness requirements are met, and whether unsupported claims or missing artifacts block final delivery.
+
+This skill verifies that every subquestion has gone through the full delivery chain: candidate methods (with PoC) → experiments → final method explanation → final result analysis → solution package (with frozen_numbers.json) → paper sections.
+
+This skill does not invent missing results, rewrite the full paper, rerun models, or approve submission when evidence is incomplete. **It also does not approve assembly if the other two audits (consistency / completeness) are missing or failed** — the three are orthogonal and all must converge.
 
 # When to use
 
@@ -63,6 +69,15 @@ Use or request:
 - Contest requirements or submission rules if available
 
 # Workflow
+
+0. **Verify sibling auditors have run (independent audit layer prerequisite).**
+   - Check that `paper/audits/cross_media_consistency_audit.md` exists with verdict PASSED.
+   - Check that `paper/audits/completeness_audit.md` exists with verdict PASSED.
+   - If either is missing, route to it first — do not pretend QA can substitute for them.
+   - If either has FAILED verdict, treat that as a BLOCKING issue and inherit its repair routing.
+   - Only when both sibling audits PASSED, proceed to step 1.
+
+   QA is the third independent auditor, not a super-auditor that subsumes the others.
 
 1. Check problem coverage.
    - Verify every original subquestion is represented in the paper.
@@ -122,12 +137,14 @@ Use or request:
    - Verify conclusions do not exceed evidence.
    - Flag any claim that cannot be traced to an artifact.
 
-9. Produce a QA report.
+9. **Produce a QA report — MANDATORY substantive file on disk.**
    - Save to `paper/qa_report.md`.
+   - **List ≥ 5 explicit pass items** with file:line evidence (concrete checks, not "all good"). These are checked by `completeness-auditor`.
    - Separate blocking issues from minor issues.
    - Provide a repair plan.
    - Route each repair to the appropriate upstream skill.
-   - Approve final assembly only if no blocking issues remain.
+   - **Approve final assembly only when ALL THREE auditors PASS** (this skill + consistency-auditor + completeness-auditor). Document the cross-auditor verdict explicitly in the report.
+   - If sibling auditors are missing or failed (step 0), QA cannot approve assembly — note this and route appropriately.
 
 # Outputs
 
@@ -158,8 +175,27 @@ Containing:
 ## Overall Status
 
 - **QA Status**: passed / failed
-- **Final Assembly Allowed**: true / false
+- **Final Assembly Allowed**: true / false (only if ALL THREE auditors PASS — see below)
 - **Date**: [timestamp]
+
+## Sibling Auditor Status (Gate G6 prerequisite)
+
+| Auditor | Report Path | Verdict |
+|---------|-------------|---------|
+| consistency-auditor | paper/audits/cross_media_consistency_audit.md | PASSED / FAILED / MISSING |
+| completeness-auditor | paper/audits/completeness_audit.md | PASSED / FAILED / MISSING |
+| quality-assurance-auditor (this report) | paper/qa_report.md | PASSED / FAILED |
+
+**Cross-auditor verdict**: ALL_PASSED (assembly allowed) / ONE_OR_MORE_FAILED (assembly blocked)
+
+## Pass Items (≥ 5 REQUIRED for this audit to count as substantive)
+
+1. ✅ Every subquestion (Q1, Q2, Q3, Q4) has paper/sections/qx.tex on disk and non-empty.
+2. ✅ All `frozen_numbers.json` files exist and are newer than their referenced code (no stale freeze).
+3. ✅ Every main model has a baseline comparison in its results section.
+4. ✅ No fabricated references detected (cross-checked against reference-manager's reference_audit.md).
+5. ✅ Every figure in `paper/figures/` is Type 3 (论文图) or Type 4 (附录图); no Type 1 (诊断图) leaked in.
+6. ✅ ...
 
 ## Workflow Completeness Check
 
@@ -288,6 +324,9 @@ Containing:
 
 - Do not fabricate missing evidence.
 - Do not approve final assembly with blocking issues.
+- **Do not approve final assembly unless ALL THREE auditors (consistency / completeness / this skill) PASS.** A single auditor's "✅" is not sufficient — the three are orthogonal.
+- Do not re-do the work of `consistency-auditor` (cross-media number/file/symbol checks) or `completeness-auditor` (audit-file existence checks). Consume their reports as inputs.
+- Do not approve "完成" verbally. Write the substantive `paper/qa_report.md` with ≥ 5 explicit pass items. `completeness-auditor` will flag a verbal-only QA as MISSING.
 - Do not hide uncertainty.
 - Do not treat planned artifacts as completed artifacts.
 - Do not rewrite the full paper inside QA.
@@ -310,7 +349,9 @@ Before approving final assembly, verify:
 - All figures and tables are traceable.
 - Final conclusions do not exceed evidence.
 - No fabrication risks detected.
-- `final_assembly_allowed` is true only when QA passes.
+- **Sibling auditors PASSED**: `paper/audits/cross_media_consistency_audit.md` (PASSED) AND `paper/audits/completeness_audit.md` (PASSED).
+- **`paper/qa_report.md` exists with ≥ 5 explicit pass items** — this file is the output of THIS skill; verify it was actually written.
+- `final_assembly_allowed` is true only when the cross-auditor verdict is `ALL_PASSED`.
 
 # Failure modes
 

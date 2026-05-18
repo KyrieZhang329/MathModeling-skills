@@ -13,13 +13,58 @@
 - Run multi-round experiments before locking in the final method.
 - Keep every change minimal, traceable, and easy to review.
 
-# Workflow Gates
+# Workflow Gates (G1 – G6)
 
-- Do not select methods before the problem is parsed and classified.
-- Do not generate code before a candidate method pool exists.
-- Do not write numerical paper claims before results exist.
-- Do not hand a subquestion to the paper writer before all three critical rules are satisfied.
-- Do not assemble the final paper before QA passes.
+Gates are not stages. A stage is "where I am"; a gate is "what I must satisfy to leave". The orchestrator evaluates each gate against an explicit `enter_condition / pass_criteria / fail_fallback` contract. See `.codex/skills/workflow-orchestrator/SKILL.md` for the full contract.
+
+- **G1 PROBLEM_PARSED**: parse + classification exist.
+- **G2 METHOD_VALIDATED** (load-bearing — method→code boundary): each candidate has a ≤30-line PoC + feasibility number. No PoC ⇒ not validated.
+- **G3 CODE_REVIEWED**: reviewer artifact exists at `code/Qx/reviews/qx_<lang>_review.md` with ≥ 5 explicit pass items.
+- **G4 RESULTS_FROZEN** (load-bearing — results→paper boundary): `results/Qx/reports/frozen_numbers.json` exists and is newer than every source file; solution package sources all numbers from it.
+- **G5 PAPER_SECTION_READY**: section meets word-count floor; every numerical result has ≥ 3 discussion dimensions; every figure passes render-check.
+- **G6 AUDIT_LAYER_PASSED**: all three independent audits PASSED (see "Independent Audit Layer" below).
+
+Rules:
+- Do not select methods before G1.
+- Do not generate code before G2 (every candidate must have a PoC).
+- Do not write numerical paper claims before G4 (numbers must be frozen).
+- Do not hand a subquestion to the paper writer before the three critical rules are satisfied.
+- Do not assemble the final paper before G6.
+- A gate failure marks all downstream artifacts DIRTY — files at later stages are not automatically valid.
+
+# Independent Audit Layer
+
+`workflow-orchestrator` does NOT decide "completion". Three orthogonal auditors do — and any one of them failing blocks final assembly:
+
+1. **consistency-auditor** → `paper/audits/cross_media_consistency_audit.md`
+   Cross-media facts (numbers / file names / symbols / parameters) match across tex ↔ code ↔ frozen_numbers.json ↔ symbol_table.md.
+2. **completeness-auditor** → `paper/audits/completeness_audit.md`
+   Every skill that claims "完成" produced a substantive artifact on disk with ≥ 5 explicit pass items. Verbal completion does not count.
+3. **quality-assurance-auditor** → `paper/qa_report.md`
+   Workflow completeness, three critical rules, anti-fabrication, paper quality.
+
+A single auditor's "✅" is NOT sufficient. The three are orthogonal — they catch different failure modes. Treat the entire layer as Gate G6.
+
+# Frozen Numbers Convention
+
+Numbers flow code → results → paper. Without a freeze layer, a bug fix in code silently shifts the paper's numbers. To prevent this:
+
+- After `solution-package-builder` runs for Qx, it MUST emit `results/Qx/reports/frozen_numbers.json` capturing every numerical claim with provenance: `{value, source_file, source_line, frozen_at, frozen_by_skill}`.
+- The solution package and all downstream paper sections source numerical claims from this file, not from raw results.
+- A frozen snapshot is **immutable** by convention. To change a frozen number, the modeler must explicitly walk the three-step:
+  1. **解冻** — log the reason in `results/Qx/reports/freeze_change_log.md`.
+  2. **修改** — update the canonical source (code or analysis report); re-run experiments if needed.
+  3. **重冻结** — re-invoke `solution-package-builder` to regenerate `frozen_numbers.json`.
+- Never edit `frozen_numbers.json` by hand.
+- `consistency-auditor` checks freeze staleness: if any `code/Qx/*` file's mtime is newer than `frozen_at`, the snapshot is STALE.
+
+# Rejected-Method Archival Convention
+
+Failed or eliminated candidate methods do not stay in the main code tree. Once `result-report-generator` or `method-selector` marks a method as `[REJECTED]`:
+
+- Move its PoC script, code, and output figures to `workspace/archived/<Qx>/<method>_REJECTED_roundN/`.
+- Keep a one-line breadcrumb in `methods/Qx/qx_method_iteration_log.md` explaining why it was rejected.
+- Main tree keeps only `[CHOSEN]` and `[BACKUP]` methods.
 
 # Per-Question Delivery Chain (MANDATORY)
 
@@ -68,16 +113,17 @@ If `qx_final_method_explanation.md`, `qx_final_result_analysis.md`, or `qx_solut
 
 # Minimum Files Per Subquestion
 
-Each subquestion Qx must have at least these 6 files before being considered "Ready for Writer":
+Each subquestion Qx must have at least these 7 files before being considered "Ready for Writer":
 
 | # | File | Primary Author | Purpose |
 |---|------|---------------|---------|
-| 1 | `methods/Qx/qx_method_candidates.md` | 建模手 + method-selector | 候选方法池 |
-| 2 | `methods/Qx/qx_method_iteration_log.md` | 建模手 + 编程手 | 方法迭代记录 |
+| 1 | `methods/Qx/qx_method_candidates.md` (with PoC under `methods/Qx/poc/`) | 建模手 + method-selector | 候选方法池 + 每个候选 ≤30 行 PoC |
+| 2 | `methods/Qx/qx_method_iteration_log.md` | 建模手 + 编程手 | 方法迭代记录 (含 [REJECTED] 归档 trace) |
 | 3 | `methods/Qx/qx_final_method_explanation.md` | 建模手 + final-method-explainer | 最终方法详解 |
-| 4 | `results/Qx/reports/qx_experiment_report.md` | 编程手 + result-report-generator | 多方法实验对比 |
+| 4 | `code/Qx/reviews/qx_<lang>_review.md` (≥ 5 通过项) | python/matlab-code-reviewer | 代码审查记录 |
 | 5 | `results/Qx/reports/qx_final_result_analysis.md` | 编程手 + result-report-generator | 最终结果分析 |
 | 6 | `results/Qx/reports/qx_solution_package_for_writer.md` | solution-package-builder | 论文手材料包 |
+| 7 | `results/Qx/reports/frozen_numbers.json` | solution-package-builder | 不可变数字快照 (Gate G4) |
 
 # Three Critical Rules (ENFORCED AT GATES)
 
@@ -214,13 +260,16 @@ project/
 
 - Check logic, units, definitions, and output consistency before handoff.
 - Robustness or sensitivity checks are required before final delivery.
+- The three independent auditors (consistency / completeness / QA) are orthogonal — all must PASS before final assembly. A single auditor's "✅" is NOT sufficient.
 - Every major claim must have at least one supporting robustness check or a stated limitation.
-- Final delivery requires QA approval.
-- QA checks BOTH paper quality AND workflow completeness (all 6 minimum files per subquestion).
+- Reviewer / auditor / QA skills must produce a substantive `*_review.md` / `*_audit.md` file on disk with ≥ 5 explicit pass items. A verbal "passed" without a file does not count.
+- Final delivery requires Gate G6 approval (all three auditors PASS).
+- QA checks BOTH paper quality AND workflow completeness (all 7 minimum files per subquestion).
 - Flag uncertainty explicitly instead of smoothing it over.
 - Do not fabricate data.
 - Do not hide uncertainty.
 - Do not approve final assembly with blocking issues.
+- Do not edit `frozen_numbers.json` by hand. Use the **解冻 → 修改 → 重冻结** three-step.
 
 # Team Role Responsibilities
 
