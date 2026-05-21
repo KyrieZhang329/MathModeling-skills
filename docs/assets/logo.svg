@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="MathModeling-skills">
+  <title>MathModeling-skills logo · fit</title>
+
+  <defs>
+    <linearGradient id="curveGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3FB55E"/>
+      <stop offset="100%" stop-color="#1A6FC4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Logomark: minimal scatter + smooth fit curve in a coordinate frame -->
+  <g transform="translate(40, 36)">
+    <!-- coordinate frame -->
+    <line x1="14" y1="14" x2="14" y2="128" stroke="#B6BEC8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="14" y1="128" x2="148" y2="128" stroke="#B6BEC8" stroke-width="2" stroke-linecap="round"/>
+    <!-- axis tick marks (subtle) -->
+    <line x1="10" y1="48"  x2="14" y2="48"  stroke="#B6BEC8" stroke-width="2"/>
+    <line x1="10" y1="88"  x2="14" y2="88"  stroke="#B6BEC8" stroke-width="2"/>
+    <line x1="54"  y1="128" x2="54"  y2="132" stroke="#B6BEC8" stroke-width="2"/>
+    <line x1="100" y1="128" x2="100" y2="132" stroke="#B6BEC8" stroke-width="2"/>
+
+    <!-- fitted curve (smooth, behind dots) -->
+    <path d="M18 122 C 48 110, 78 78, 144 22"
+          fill="none"
+          stroke="url(#curveGrad)"
+          stroke-width="4.2"
+          stroke-linecap="round"/>
+    <!-- extrapolation hint (dashed continuation) -->
+    <path d="M144 22 L158 10"
+          fill="none"
+          stroke="#2E9E44"
+          stroke-width="2.6"
+          stroke-linecap="round"
+          stroke-dasharray="3 4"/>
+
+    <!-- scatter points -->
+    <circle cx="30"  cy="118" r="4.2" fill="#1A6FC4"/>
+    <circle cx="54"  cy="104" r="4.2" fill="#1A6FC4"/>
+    <circle cx="78"  cy="82"  r="4.2" fill="#1A6FC4"/>
+    <circle cx="106" cy="58"  r="4.2" fill="#1A6FC4"/>
+    <circle cx="134" cy="34"  r="4.2" fill="#1A6FC4"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(230, 98)">
+    <text x="0" y="0" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="800" fill="#1A2740">MathModeling</text>
+    <text x="0" y="34" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#1A6FC4" letter-spacing="3">- skills</text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="230" y="172" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#5A6472" letter-spacing="1.5">
+    26 skills · 6 gates · 3 independent auditors
+  </text>
+</svg>
