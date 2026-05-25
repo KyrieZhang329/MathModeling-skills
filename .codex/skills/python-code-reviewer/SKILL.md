@@ -112,6 +112,24 @@ Use or request:
    - Check objective functions, constraints, weights, and formulas against the method plan.
    - Check convergence or stopping criteria where relevant.
 
+6.5. **Constraint-direction sanity check (P2 — list for human review, do NOT auto-correct).**
+    Inequality direction errors (writing `allocated ≥ capacity` when it should be `≤`) are semantic, not syntactic — the agent cannot verify physical correctness. But it can **surface every constraint for the user to scan**.
+
+    For every constraint in the code:
+    - Extract the line number, the inequality direction (`≤` / `≥` / `==`), the left-hand side variable name, and the right-hand side expression.
+    - Format as a compact table in the review file:
+
+    | File:line | Direction | LHS | RHS | Expected physical meaning |
+    |---|---|---|---|---|
+    | `code/Q3/q3_main.py:42` | `≤` | `total_allocated[i]` | `capacity[i]` | allocated ≤ capacity (resource upper bound) |
+    | `code/Q3/q3_main.py:58` | `≥` | `allocated[i]` | `demand_min[i]` | allocated ≥ minimum demand (demand floor) |
+    | `code/Q3/q3_main.py:72` | `==` | `sum(allocated)` | `available` | total consumed = total available (conservation) |
+
+    - Do NOT change inequality direction — the reviewer cannot know the modeler's intent. But the reviewer MUST:
+      - Flag constraints whose direction looks counterintuitive (e.g., `allocated ≤ demand_min` is surprising — should it be `≥`?).
+      - Ask the user to scan the "Expected physical meaning" column and confirm.
+    - This is a **safety net for the user**, not a correctness guarantee. Document this table in `code/Qx/reviews/qx_python_review.md` under a `## Constraint Direction Review` section.
+
 7. Check prediction and machine learning risks when applicable.
    - Check train-test split.
    - Check cross-validation setup when used.

@@ -51,6 +51,26 @@ Use or request:
 
 # Workflow
 
+0. **Attachment-to-subquestion mapping (P0 guard — first action before touching any data).**
+   The single most destructive data-class error is "Q2's attachment run through Q1's model". A typical contest ships 2-4 attachments with vaguely similar names (e.g., `附件1.xlsx`, `attachment_a.csv`). Do NOT assume file order = question order. Before opening a single file:
+
+   - List every attachment under `workspace/data_raw/` by name and size.
+   - For each, open it and read the **first 3 rows + column headers only** (not the whole file).
+   - Output a 3-column mapping table:
+
+   | Attachment | Columns (sample) | → Subquestion |
+   |---|---|---|
+   | `附件1.xlsx` | `城市名, GDP, 人口, PM2.5, 绿地面积, …` (6 cols) | **Q1 — evaluation** (multiple indicators → scoring/ranking) |
+   | `附件2.csv` | `日期, 需求量` (36 rows, monthly) | **Q2 — prediction** (time series) |
+   | `附件3.xlsx` | `起点, 终点, 距离, 容量` (4 cols) | **Q3 — optimization** (routing/allocation) |
+   | `附件4.xlsx` | same columns as 附件1 + `政策等级` | **Q4 — extension of Q1** or **Q1 reuse — confirm with user** |
+
+   - If any mapping is ambiguous (e.g., two attachments both look like they fit the same Qx), stop and ask the user: **"附件 2 和附件 3 都像 Q2 的数据——哪个是正确对应？"**
+   - Attachments that serve multiple subquestions (e.g., shared master data) must be explicitly tagged `[SHARED: Q1,Q3]`.
+   - **Do not proceed to step 1 until the user confirms this mapping table.** A single mis-mapped attachment silently poisons every downstream artifact.
+
+   This step also flags the case where an attachment is referenced in the problem text but missing from `data_raw/` — report it as a blocker immediately.
+
 1. Preserve raw data.
    - Tell the user to place raw data under `workspace/data/data_raw/` before cleaning begins.
    - Treat `workspace/data/data_raw/` as read-only.

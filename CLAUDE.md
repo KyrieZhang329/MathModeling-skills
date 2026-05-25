@@ -10,6 +10,11 @@
 - Keep file edits minimal and traceable.
 - Do not overwrite validated artifacts casually.
 - Only generate code from a validated method plan.
+- **Change-propagation rule (P1)**: After modifying any file under `code/Qx/`, `methods/Qx/`, `results/Qx/reports/`, or `planning/`, grep the entire workspace for references to the changed artifact (symbol name, parameter name, file path, numerical value), list every file that now may be stale, and either update it in the same turn or flag it as STALE with recommended repair. Do not let the next turn discover the inconsistency. Specifically:
+  1. `grep -rn '<changed_identifier>' methods/ code/ results/ paper/ planning/` before claiming the change is "done".
+  2. If the changed file is under `code/Qx/` and `frozen_numbers.json` exists for that Qx, mark the freeze as stale in `results/Qx/reports/freeze_change_log.md` and recommend re-freezing.
+  3. If the changed file is under `methods/Qx/` and `paper/sections/qx.tex` exists, flag that section as potentially stale.
+  4. After any multi-file change, run `consistency-auditor` for the affected Qx as an incremental check — do not defer to the final G6 run.
 
 # Workflow Gates (G1 – G6)
 

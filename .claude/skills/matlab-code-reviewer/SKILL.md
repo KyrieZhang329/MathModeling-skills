@@ -109,6 +109,23 @@ Use or request:
    - Check objective functions, constraints, weights, and formulas against the method plan.
    - Check convergence or stopping criteria where relevant.
 
+6.5. **Constraint-direction sanity check (P2 — list for human review, do NOT auto-correct).**
+    Inequality direction errors (writing `allocated ≥ capacity` when it should be `≤`) are semantic, not syntactic — the agent cannot verify physical correctness. But it can **surface every constraint for the user to scan**.
+
+    For every constraint in the code:
+    - Extract the line number, the inequality direction (`<=` / `>=` / `==`), the left-hand side variable name, and the right-hand side expression.
+    - Format as a compact table in the review file:
+
+    | File:line | Direction | LHS | RHS | Expected physical meaning |
+    |---|---|---|---|---|
+    | `code/matlab/Q3/q3_main.m:42` | `<=` | `total_allocated(i)` | `capacity(i)` | allocated ≤ capacity (resource upper bound) |
+    | `code/matlab/Q3/q3_main.m:58` | `>=` | `allocated(i)` | `demand_min(i)` | allocated ≥ minimum demand (demand floor) |
+
+    - Do NOT change inequality direction. The reviewer MUST:
+      - Flag constraints whose direction looks counterintuitive.
+      - Ask the user to scan the "Expected physical meaning" column and confirm.
+    - Document this table in `code/matlab/Qx/reviews/qx_matlab_review.md` under a `## Constraint Direction Review` section.
+
 7. Check randomness and reproducibility.
    - If randomness is used, verify `rng(seed)` is set.
    - Verify stochastic outputs are saved.
